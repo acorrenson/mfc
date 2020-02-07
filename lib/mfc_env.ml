@@ -24,6 +24,10 @@ let push_frame (e:env) =
 let top_frame (e:env) =
   List.hd e.frames
 
+(** Pop the top frame *)
+let pop_frame (e:env) =
+  e.frames <- List.tl e.frames
+
 (** Add a local variable to the env *)
 let new_local e x =
   let l = (top_frame e) in
@@ -36,6 +40,7 @@ let _ =
   new_local e "z";
   push_frame e;
   new_local e "g";
-  match lookup_opt e "g" with
+  pop_frame e;
+  match lookup_opt e "z" with
   | None -> print_endline "error"
   | Some i -> print_int i
