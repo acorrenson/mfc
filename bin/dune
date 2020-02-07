@@ -1,0 +1,6 @@
+(executable
+ (public_name mfc)
+ (name main)
+ (libraries mfc base cmdliner)
+ (preprocess
+  (pps ppx_inline_test)))
