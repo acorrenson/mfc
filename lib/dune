@@ -1,4 +1,4 @@
 (library
   (name mfc)
   (public_name mfc)
-  (modules mfc_ast mfc_ast_processing mfc_cfg mfc_quad mfc_generate))
+  (modules mfc_ast mfc_ast_processing mfc_cfg mfc_quad mfc_generate mfc_env))

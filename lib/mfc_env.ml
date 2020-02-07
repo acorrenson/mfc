@@ -1,27 +1,32 @@
+(** A frame (in the stack) *)
 type frame = {
   mutable variable_counter: int;
   mutable local_vars : (string * int) list
 }
 
+(** A complete environment associated with a program *)
 type env = {
   mutable label_counter: int;
   mutable frames : frame list;
 }
 
+(** Lookup for local variable x offset *)
 let lookup_opt env x =
-  let rec lookup_frame f x =
-    List.assoc_opt x f.local_vars
-  in
-  lookup_frame (List.hd env.frames) x
+  match env.frames with
+  | [] -> None
+  | f::_ -> List.assoc_opt x f.local_vars 
 
-let push_frame (e:env) f =
-  e.frames <- f::e.frames
+(** Push a new frame *)
+let push_frame (e:env) =
+  e.frames <- {variable_counter = 0; local_vars = []}::e.frames
 
-let last_frame (e:env) =
+(** Get the top frame *)
+let top_frame (e:env) =
   List.hd e.frames
 
+(** Add a local variable to the env *)
 let new_local e x =
-  let l = (last_frame e) in
+  let l = (top_frame e) in
   l.local_vars <- (x, l.variable_counter)::l.local_vars;
   l.variable_counter <- l.variable_counter + 1
 
@@ -29,6 +34,7 @@ let _ =
   let f1 = {variable_counter = 2; local_vars = [("x", 0); ("y", 1)]} in
   let e = {label_counter = 0; frames = [f1]} in
   new_local e "z";
+  push_frame e;
   new_local e "g";
   match lookup_opt e "g" with
   | None -> print_endline "error"
