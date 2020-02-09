@@ -1,24 +1,29 @@
 exception ParseException of string
 
-type 'a parse = ('a * string) option
+type 'a parse_result = ('a * string) option
 
-type 'a parser = string -> ('a * string) option
+type 'a parser = string -> 'a parse_result
 
-let is_done p =
-  match p with
+let is_done = function
   | Some(_, "") | None -> true
   | Some(_, _) -> false
 
-let option_of_parse p = match p with
+let option_of_parse = function
   | Some(c, _) -> Some(c)
   | None -> None
 
-let parse_char c input =
-  match input with
-  | "" -> None
-  | x -> match String.get x 0 with
-    | x when x == c -> Some(String.make 1 c, String.sub input 1 ((String.length input)-1))
-    | _ -> None
+let pmap f = Option.map(fun (v,rest) -> (f v, rest))
+
+let pand f = function
+  | Some(c, rest) -> f c rest
+  | None -> None
+
+let parse_char c = function
+    | "" -> None
+    | input -> match String.get input 0 with
+    | x when x = c -> let rest = String.(sub input 1 ((length input)-1)) in
+                     Some(String.make 1 c, rest)
+      | _ -> None
 
 let parse_or a b =
   let parser input =
@@ -36,24 +41,17 @@ let rec parse_any ps input =
     | x -> x
 
 let parse_all ps =
-  let rec do_parse ct ps input =
+  let rec do_parse ct ps (input:string) =
     match ps with
-    | [] -> None
+    | [] -> Some([], input)
     | p::ps -> match p input with
       | Some(c, rest) -> do_parse (ct @ [c]) ps rest
       | None -> None
   in
   do_parse [] ps
 
-let pmap f = Option.map(fun (v,rest) -> (f v, rest))
-
-let pand f p =
-  match p with
-  | Some(c, rest) -> f c rest
-  | None -> None
-
 let parse_many p =
-  let rec parser ct input =
+  let rec parser ct (input:string) =
     match p input with
     | Some(c, rest) -> parser (ct @ [c]) rest
     | None -> match ct with
@@ -72,7 +70,7 @@ let parse_concat_many p =
   in
   parser ""
 
-let parse_ignore (p:string -> 'a parse) (next:string -> 'b parse) input =
+let parse_ignore p next input =
   match p input with
   | Some(_, rest) -> next rest
   | None -> next input
@@ -102,6 +100,16 @@ let parse_concat_seq ps =
   in
   parser ps ""
 
+let rec parse_combine_seq ps input =
+  match ps with
+  | [] -> Some([], input)
+  | v::vs ->
+    match v input with
+    | None -> None
+    | Some(c, rest) ->
+      match parse_combine_seq vs rest with
+      | Some(cs, rest) -> Some(c::cs, rest)
+      | None -> None
 
 let explode s =
   let rec step s l i =
@@ -127,16 +135,6 @@ let parse_anychar_in s =
   in
   parser "" 0
 
-let rec parse_combine_seq ps input =
-  match ps with
-  | [] -> Some([], input)
-  | v::vs ->
-    match v input with
-    | None -> None
-    | Some(c, rest) ->
-      match parse_combine_seq vs rest with
-      | Some(cs, rest) -> Some(c::cs, rest)
-      | None -> None
 
 let parse_delim d p input =
   match p input with
@@ -153,4 +151,3 @@ let parse_wrap l r p input =
     | Some(c, rest) -> match r rest with
       | None -> None
       | Some(_, rest) -> Some(c, rest)
-
