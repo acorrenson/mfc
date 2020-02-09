@@ -1,9 +1,7 @@
-open Mfc_ast
-
 (** A frame (in the stack) *)
 type frame = {
   mutable variable_counter: int;
-  mutable local_vars : (string * (int * ctype)) list
+  mutable local_vars : (string * int) list
 }
 
 (** A complete environment associated with a program *)
@@ -17,8 +15,8 @@ let new_label env =
   env.label_counter <- env.label_counter + 1;
   l
 
-let new_tmp env t =
-  let l = Printf.sprintf "reg_%s_%d" (str_of_type t) env.label_counter in
+let new_tmp env =
+  let l = Printf.sprintf "reg_%d" env.label_counter in
   env.label_counter <- env.label_counter + 1;
   l
 
@@ -32,13 +30,7 @@ let lookup_opt env x =
 let lookup_opt_offset env x =
   match lookup_opt env x with
   | None -> None
-  | Some (o, _) -> Some o
-
-(** Lookup for local variable x type *)
-let lookup_opt_type env x =
-  match lookup_opt env x with
-  | None -> None
-  | Some (_, t) -> Some t
+  | _ as off -> off
 
 
 (** Push a new frame *)
@@ -54,9 +46,9 @@ let pop_frame (e:env) =
   e.frames <- List.tl e.frames
 
 (** Add a local variable to the env *)
-let new_local e x t =
+let new_local e x =
   let l = (top_frame e) in
-  l.local_vars <- (x, (l.variable_counter, t))::l.local_vars;
+  l.local_vars <- (x, l.variable_counter)::l.local_vars;
   l.variable_counter <- l.variable_counter + 1
 
 let new_env () = {label_counter = 0; frames = []}
