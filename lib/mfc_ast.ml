@@ -27,4 +27,4 @@ type s_ast =
   | Ret of e_ast
   | Declare of string
   | DeclareFun of string * int * int
-  | Block of s_ast
+  | Block of s_ast list

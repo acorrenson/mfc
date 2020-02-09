@@ -1,8 +1,6 @@
-exception ParseException of string
-
 type 'a parse_result = ('a * string) option
-
 type 'a parser = string -> 'a parse_result
+type 'a t = 'a parser
 
 let is_done = function
   | Some(_, "") | None -> true
@@ -14,16 +12,16 @@ let option_of_parse = function
 
 let pmap f = Option.map(fun (v,rest) -> (f v, rest))
 
-let pand f = function
-  | Some(c, rest) -> f c rest
+let pand (f: 'a * string -> 'b parse_result) = function
+  | Some x -> f x
   | None -> None
 
 let parse_char c = function
-    | "" -> None
-    | input -> match String.get input 0 with
+  | "" -> None
+  | input -> match String.get input 0 with
     | x when x = c -> let rest = String.(sub input 1 ((length input)-1)) in
-                     Some(String.make 1 c, rest)
-      | _ -> None
+      Some(String.make 1 c, rest)
+    | _ -> None
 
 let parse_or a b =
   let parser input =
@@ -33,7 +31,7 @@ let parse_or a b =
   in
   parser
 
-let rec parse_any ps input =
+let rec parse_any (ps:'a parser list) input =
   match ps with
   | [] -> None
   | p::ps -> match p input with
@@ -136,7 +134,7 @@ let parse_anychar_in s =
   parser "" 0
 
 
-let parse_delim d p input =
+let parse_delim (d:'a parser) (p: 'b parser) input =
   match p input with
   | None -> None
   | Some(c, rest) -> match parse_skip d p rest with
