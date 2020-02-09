@@ -13,11 +13,6 @@ type compare =
 
 type unop = Neg
 
-type ctype =
-  | T_int
-  | T_pint
-  | T_fun of ctype * ctype list
-
 type r_ast =
   | Id of string
 
@@ -41,13 +36,7 @@ type s_ast =
   | While of c_ast * s_ast
   | Call of r_ast * e_ast list
   | Ret of e_ast
-  | Declare of string * ctype
+  | Declare of string
+  | DeclareFun of string * int * int
   | Block of s_ast
 
-let rec str_of_type t =
-  match t with
-  | T_int -> "int"
-  | T_pint -> "pint"
-  | T_fun (e, l) ->
-    (List.fold_left (fun a s -> a ^ s ^ " -> " ) "" (List.map str_of_type l))
-    ^ (str_of_type e)
