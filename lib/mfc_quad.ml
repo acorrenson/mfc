@@ -59,8 +59,8 @@ let rec quad_s s env =
   | Ret e ->
     let qe, ve = quad_e e env in
     qe @ [Q_PUSH ve]
-  | Declare (s, t) ->
-    new_local env s t;
+  | Declare s ->
+    new_local env s;
     []
 and quad_e _ _ = [], ""
 and quad_c c env si sinon =
