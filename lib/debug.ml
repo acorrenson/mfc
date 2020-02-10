@@ -39,5 +39,12 @@ and _factor inp =
     ) <|> _nat
   ) inp
 
-let _ =
-  _expr "2+4*2"
+let rec eval =
+  function
+  | Val v -> v
+  | Add (l,r) -> (eval l) + (eval r)
+  | Mult (l,r) -> (eval l) * (eval r)
+
+let expr_eval = parser _expr |> fmap eval
+
+let _ = parse expr_eval "2+3*(4*5)"
