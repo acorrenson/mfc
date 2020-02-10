@@ -1,4 +1,4 @@
-type binop = Add | Sub
+type binop = Add | Sub | Mult
 
 type compare = Ge | Gt | Le | Lt | Eq | Ne
 
