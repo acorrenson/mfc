@@ -1,151 +1,159 @@
-type 'a parse_result = ('a * string) option
-type 'a parser = string -> 'a parse_result
-type 'a t = 'a parser
+(** Parsing data *)
+type 'a pdata = ('a * string)
 
-let is_done = function
-  | Some(_, "") | None -> true
-  | Some(_, _) -> false
+(** Parsing result (monadic) *)
+type 'a presult = 'a pdata option
 
-let option_of_parse = function
-  | Some(c, _) -> Some(c)
+(** Parser constructor *)
+type 'a parser = P of (string -> 'a presult)
+
+exception ParseException of string
+
+(**
+   Null parser.
+   [parse pszero s] always returns None
+*)
+let pzero = P (fun _ -> None)
+
+(**
+   Empty parser.
+   [parse pone s] always returns [Some ([], s)].
+*)
+let pone = P (fun rest -> Some([], rest))
+
+(**
+   [parse p inp] applies the parser [p] to the input string [inp].
+*)
+let parse p inp =
+  match p with
+  | P (p) -> p inp
+
+(**
+   [pmap f (parse p inp)] applies the function f 
+   to result of [parse p inp] application.
+*)
+let pmap f: 'a presult -> 'b presult =
+  function
+  | Some(c, out) -> Some(f c, out)
   | None -> None
 
-let pmap f = Option.map(fun (v,rest) -> (f v, rest))
+(** Try to get the result of a parser, raises [ParseException] *)
+let pleak: 'a presult -> 'a =
+  function
+  | Some(c, _) -> c
+  | None -> raise (ParseException "Attempted to get failed parse")
 
-let pand (f: 'a * string -> 'b parse_result) = function
-  | Some x -> f x
-  | None -> None
+(** [parse (fmap f p) inp] is [parse p inp |> pmap f] *)
+let fmap f p =
+  P (fun inp -> parse p inp |> pmap f)
 
-let parse_char c = function
-  | "" -> None
-  | input -> match String.get input 0 with
-    | x when x = c -> let rest = String.(sub input 1 ((length input)-1)) in
-      Some(String.make 1 c, rest)
-    | _ -> None
-
-let parse_or a b =
-  let parser input =
-    match a input with
-    | Some(_,_) as x -> x
-    | None -> b input
-  in
-  parser
-
-let rec parse_any (ps:'a parser list) input =
-  match ps with
-  | [] -> None
-  | p::ps -> match p input with
-    | None -> parse_any ps input
-    | x -> x
-
-let parse_all ps =
-  let rec do_parse ct ps (input:string) =
-    match ps with
-    | [] -> Some([], input)
-    | p::ps -> match p input with
-      | Some(c, rest) -> do_parse (ct @ [c]) ps rest
+(**
+   Binding operator.
+   [parse (p >>= f) inp] is [parse (f r) out] if [parse p inp] retunrs [Some (r, out)].
+*)
+let (>>=) p f =
+  P (fun inp -> match parse p inp with
       | None -> None
-  in
-  do_parse [] ps
+      | Some(v, out) -> parse (f v) out)
 
-let parse_many p =
-  let rec parser ct (input:string) =
-    match p input with
-    | Some(c, rest) -> parser (ct @ [c]) rest
-    | None -> match ct with
-      | [] -> None
-      | x -> Some(x, input)
-  in
-  parser []
+(**
+   Or operator.
+   [p <|> q] accepts all strings accepted by [p] or by [q].
+*)
+let (<|>) p q =
+  P (fun inp -> match parse p inp with
+      | None -> parse q inp
+      | _ as r -> r)
 
-let parse_concat_many p =
-  let rec parser ct input =
-    match p input with
-    | Some(c, rest) -> parser (ct^c) rest
-    | None -> match ct with
+(**
+   Syntax sugar for bindings.
+   [let* x = p in f x] is [p >>= (fun x -> f x)] where f returns a parser.
+*)
+let (let*) x f = x >>= f
+
+(**
+   Parser for a single char [c].
+*)
+let pchar c =
+  P (fun inp -> match inp with
       | "" -> None
-      | x -> Some(x, input)
-  in
-  parser ""
+      | x when x.[0] = c -> Some(c, String.sub x 1 ((String.length x) - 1))
+      | _ -> None)
 
-let parse_ignore p next input =
-  match p input with
-  | Some(_, rest) -> next rest
-  | None -> next input
+(**
+   The parser [some p] tries to apply [p] zero or more times.
+   Retunrs the result as a list.
+*)
+let rec some (p : 'a parser) =
+  P (fun inp ->
+      match parse p inp with
+      | None -> Some ([], inp)
+      | Some(x, rest) ->
+        match parse (some p) rest with
+        | Some (lx, r) -> Some (x::lx, r)
+        | None -> None
+    )
 
-let parse_skip p next input =
-  match p input with
-  | Some(_, rest) -> next rest
-  | None -> None
+(**
+   The parser [some p] tries to apply [p] one or more times.
+   Returns the result as a list (or None).
+*)
+let many (p : 'a parser) =
+  let* x = p in
+  let* lx = some p in
+  P (fun inp ->
+      Some (x::lx, inp)
+    )
 
-let parse_concat_seq ps =
-  let rec parser ps ct input =
-    match ps with
-    | p::ps ->
-      begin
-        match p input with
-        | Some(c, rest) -> parser ps (ct ^ c) rest
-        | None -> match ct with
-          | "" -> None
-          | x -> Some(x, input)
-      end
-    | [] ->
-      begin
-        match ct with
-        | "" -> None
-        | x -> Some(x, input)
-      end
-  in
-  parser ps ""
+(**
+   [anychar_of cl] accepts any char in the list [cl].
+*)
+let anychar_of cl =
+  match cl with
+  | x::rest -> List.fold_left (<|>) (pchar x) (List.map pchar rest)
+  | [] -> P (fun _ -> None)
 
-let rec parse_combine_seq ps input =
-  match ps with
-  | [] -> Some([], input)
-  | v::vs ->
-    match v input with
-    | None -> None
-    | Some(c, rest) ->
-      match parse_combine_seq vs rest with
-      | Some(cs, rest) -> Some(c::cs, rest)
-      | None -> None
-
+(**
+   Convert a string into a list of char.
+*)
 let explode s =
-  let rec step s l i =
-    if i == String.length s then l
-    else step s (l @ [s.[i]]) (i+1)
+  let rec step lc i =
+    if i = String.length s then lc
+    else step (lc @ [s.[i]]) (i+1)
   in
-  step s [] 0
+  step [] 0
 
-let parse_literal s =
-  let l = explode s in
-  let m = List.map parse_char l in
-  parse_concat_seq m
+(**
+   [anychar_in s] accepts any char in string [s].
+*)
+let anychar_in s =
+  explode s |> anychar_of
 
-let parse_anychar_in s =
-  let rec parser ct n input =
-    if n == (String.length s) then
-      match ct with
-      | "" -> None
-      | _ -> Some(ct, input)
-    else match parse_char (s.[n]) input with
-      | Some(c, rest) -> Some(c, rest)
-      | None -> parser ct (n+1) input
-  in
-  parser "" 0
+(**
+   Convert a list of chars into a string.
+*)
+let combine_str ls = List.fold_left (^) "" ls
 
+(**
+   Convert a list of chars into a string.
+*)
+let combine lc = combine_str (List.map (String.make 1) lc)
 
-let parse_delim (d:'a parser) (p: 'b parser) input =
-  match p input with
-  | None -> None
-  | Some(c, rest) -> match parse_skip d p rest with
-    | Some(d, rest) -> Some((c,d), rest)
-    | None -> None
+(**
+   [sequence [p1; ...; pn]] tries to apply parsers p1 to pn sequentially.
+   The resulting parser returns an optional list.
+*)
+let rec sequence =
+  function
+  | [] -> pone
+  | p::pl ->
+    let* x = p in
+    let* xs = sequence pl in
+    P (fun inp -> Some(x::xs, inp))
 
-let parse_wrap l r p input =
-  match l input with
-  | None -> None
-  | Some(_, rest) -> match p rest with
-    | None -> None
-    | Some(c, rest) -> match r rest with
-      | None -> None
-      | Some(_, rest) -> Some(c, rest)
+let sequence_of_chars cl = sequence (List.map pchar cl)
+let sequence_of_string s = sequence_of_chars (explode s)
+let literal s = fmap combine (sequence_of_string s)
+
+(** [parse f] is [P (fun inp -> f inp)] *)
+let parser f = P (fun inp -> f inp)
