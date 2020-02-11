@@ -1,3 +1,28 @@
+module String =
+struct
+  include String
+
+  let explode s =
+    let rec step lc i =
+      if i = length s then lc
+      else step (lc @ [s.[i]]) (i+1)
+    in
+    step [] 0
+
+  let rec combine: char list -> string =
+    function
+    | [] -> ""
+    | c::cl -> (String.make 1 c) ^ (combine cl)
+
+  let rec combine_str: string list -> string =
+    function
+    | [] -> ""
+    | s::sl -> s ^ (combine_str sl)
+
+  let substr l r s = String.sub s l ((length s) - 1 - r)
+  let rest = substr 1 0
+end
+
 (** Parsing data *)
 type 'a pdata = ('a * string)
 
@@ -52,9 +77,11 @@ let fmap f p =
    [parse (p >>= f) inp] is [parse (f r) out] if [parse p inp] retunrs [Some (r, out)].
 *)
 let (>>=) p f =
-  P (fun inp -> match parse p inp with
+  P begin
+    fun inp -> match parse p inp with
       | None -> None
-      | Some(v, out) -> parse (f v) out)
+      | Some(v, out) -> parse (f v) out
+  end
 
 (**
    Or operator.
@@ -70,6 +97,13 @@ let (<|>) p q =
    [let* x = p in f x] is [p >>= (fun x -> f x)] where f returns a parser.
 *)
 let (let*) x f = x >>= f
+
+let (~~) p q =
+  let* x = p in
+  let* y = q in
+  P(fun inp -> Some((x,y), inp))
+
+let (||>) p f = fmap f p
 
 (**
    Parser for a single char [c].
@@ -108,26 +142,30 @@ let many (p : 'a parser) =
 (**
    [anychar_of cl] accepts any char in the list [cl].
 *)
+let any = P(fun inp -> Some(String.get inp 0, String.rest inp))
+
+let forget p = P begin
+    fun inp -> match parse p inp with
+      | Some(_, rest) -> Some([], rest)
+      | None -> Some([], inp)
+  end
+
+let ignore p = P begin
+    fun inp -> match parse p inp with
+      | Some(_, rest) -> Some([], rest)
+      | None -> None
+  end
+
 let anychar_of cl =
   match cl with
   | x::rest -> List.fold_left (<|>) (pchar x) (List.map pchar rest)
   | [] -> P (fun _ -> None)
 
 (**
-   Convert a string into a list of char.
-*)
-let explode s =
-  let rec step lc i =
-    if i = String.length s then lc
-    else step (lc @ [s.[i]]) (i+1)
-  in
-  step [] 0
-
-(**
    [anychar_in s] accepts any char in string [s].
 *)
 let anychar_in s =
-  explode s |> anychar_of
+  String.explode s |> anychar_of
 
 (**
    Convert a list of chars into a string.
@@ -151,9 +189,16 @@ let rec sequence =
     let* xs = sequence pl in
     P (fun inp -> Some(x::xs, inp))
 
+
 let sequence_of_chars cl = sequence (List.map pchar cl)
-let sequence_of_string s = sequence_of_chars (explode s)
-let literal s = fmap combine (sequence_of_string s)
+let sequence_of_string s = sequence_of_chars (String.explode s)
+let literal s = sequence_of_string s ||> String.combine
+
+let wrap l r p =
+  let* _ = l in
+  let* v = p in
+  let* _ = r in
+  P (fun inp -> Some(v, inp))
 
 (** [parse f] is [P (fun inp -> f inp)] *)
 let parser f = P (fun inp -> f inp)

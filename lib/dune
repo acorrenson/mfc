@@ -5,5 +5,5 @@
 
 (executable 
   (name debug)
-  (libraries mfc)
+  (libraries str mfc)
   (modules debug))
