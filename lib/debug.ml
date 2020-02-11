@@ -1,17 +1,3 @@
-open Mfc.Mfc_parsing
-
-type expr =
-  | Add of expr * expr
-  | Mult of expr * expr
-  | Val of int
-
-let _digit = anychar_in "0123456789"
-let _nat =
-  many _digit
-  |> fmap (fun lc -> List.fold_left (^) "" (List.map (String.make 1) lc))
-  |> fmap (fun i -> Val (int_of_string i))
-
-
 let rec _expr inp =
   parse (
     (
@@ -104,6 +90,3 @@ let rec _stmt inp =
       P (fun inp -> Some (Do s, inp))
     )
   ) inp
-
-
-
