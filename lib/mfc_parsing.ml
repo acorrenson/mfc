@@ -108,7 +108,6 @@ let (||>) p f = fmap f p
 *)
 let pchar c =
   P (fun inp -> match inp with
-      | "" -> None
       | x when x.[0] = c -> Some(c, String.sub x 1 ((String.length x) - 1))
       | _ -> None)
 
