@@ -188,3 +188,9 @@ let wrap l r p =
 
 (** [parse f] is [P (fun inp -> f inp)] *)
 let parser f = P (fun inp -> f inp)
+
+let trim p =
+  let* _ = some (pchar ' ' <|> pchar '\n' <|> pchar '\t') in
+  let* e = p in
+  let* _ = some (pchar ' ' <|> pchar '\n' <|> pchar '\t') in
+  P (fun inp -> Some(e, inp))
