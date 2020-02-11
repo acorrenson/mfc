@@ -98,11 +98,9 @@ let (<|>) p q =
 *)
 let (let*) x f = x >>= f
 
-let (~~) p q =
-  let* x = p in
-  let* y = q in
-  P(fun inp -> Some((x,y), inp))
-
+(**
+   Alias for fmap.
+*)
 let (||>) p f = fmap f p
 
 (**
@@ -143,18 +141,6 @@ let many (p : 'a parser) =
    [anychar_of cl] accepts any char in the list [cl].
 *)
 let any = P(fun inp -> Some(String.get inp 0, String.rest inp))
-
-let forget p = P begin
-    fun inp -> match parse p inp with
-      | Some(_, rest) -> Some([], rest)
-      | None -> Some([], inp)
-  end
-
-let ignore p = P begin
-    fun inp -> match parse p inp with
-      | Some(_, rest) -> Some([], rest)
-      | None -> None
-  end
 
 let anychar_of cl =
   match cl with
