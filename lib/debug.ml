@@ -1,4 +1,17 @@
+module List =
+    struct
+        include List
+
+        let rec make n v = match n with
+        | 0 -> []
+        | 1 -> [v]
+        | _ -> v::(make (n-1) v)
+        let first l = List.nth l 0
+        let flat_first l = l |> List.flatten |> (fun l -> List.nth l 0)
+    end
+
 open Mfc.Mfc_parsing
+
 
 type expr =
   | Add of expr * expr
@@ -6,38 +19,26 @@ type expr =
   | Val of int
 
 let _digit = anychar_in "0123456789"
-let _nat =
-  many _digit
-  |> fmap (fun lc -> List.fold_left (^) "" (List.map (String.make 1) lc))
-  |> fmap (fun i -> Val (int_of_string i))
+let _nat = many _digit ||> String.combine ||> (fun i -> Val (int_of_string i))
+let _array_of v = [v]
+let _wrap l r p =
+  sequence [ignore l; p; ignore r] ||> List.flat_first
+
+let _infix a i b =
+  let* x = a in
+  let* _ = literal i in
+  let* y = b in
+  P(fun inp -> Some((x,y), inp))
+
+let make_add (l,r) = Add (l,r)
+let make_mult (l,r) = Mult (l,r)
 
 let rec _expr inp =
-  parse (
-    (
-      let* n1 = parser _term in
-      let* _ = pchar '+' in
-      let* n2 = parser _expr in
-      P (fun inp -> Some (Add (n1, n2), inp))
-    ) <|> parser _term
-  ) inp
+  parse ( _infix (parser _term) "+" (parser _expr) ||> make_add <|> parser _term  ) inp
 and _term inp =
-  parse (
-    (
-      let* f = parser _factor in
-      let* _ = pchar '*' in
-      let* t = parser _term in
-      P (fun inp -> Some (Mult (f, t), inp))
-    ) <|> parser _factor
-  ) inp
+  parse (_infix (parser _factor) "*" (parser _term) ||> make_mult <|> parser _factor) inp
 and _factor inp =
-  parse (
-    (
-      let* _ = pchar '(' in
-      let* e = parser _expr in
-      let* _ = pchar ')' in
-      P (fun inp -> Some (e, inp))
-    ) <|> _nat
-  ) inp
+  parse (_wrap (pchar '(') (pchar ')') (parser _expr ||> List.make 1) <|> _nat) inp
 
 let rec eval =
   function
@@ -45,6 +46,6 @@ let rec eval =
   | Add (l,r) -> (eval l) + (eval r)
   | Mult (l,r) -> (eval l) * (eval r)
 
-let expr_eval = parser _expr |> fmap eval
+let expr_eval = parser _expr ||> eval
 
-let _ = parse expr_eval "2+3*(4*5)"
+let _ = print_string "Input computation: "; parse expr_eval (read_line()) |> pmap string_of_int |> pmap print_endline

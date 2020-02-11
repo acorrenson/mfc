@@ -1,3 +1,28 @@
+module String =
+struct
+  include String
+
+  let explode s =
+    let rec step lc i =
+      if i = length s then lc
+      else step (lc @ [s.[i]]) (i+1)
+    in
+    step [] 0
+
+  let rec combine: char list -> string =
+    function
+    | [] -> ""
+    | c::cl -> (String.make 1 c) ^ (combine cl)
+
+  let rec combine_str: string list -> string =
+    function
+    | [] -> ""
+    | s::sl -> s ^ (combine_str sl)
+
+  let substr l r s = String.sub s l ((length s) - 1 - r)
+  let rest = substr 1 0
+end
+
 type 'a pdata = ('a * string)
 type 'a presult = 'a pdata option
 type 'a parser = P of (string -> 'a presult)
@@ -25,9 +50,11 @@ let fmap f p =
   P (fun inp -> parse p inp |> pmap f)
 
 let (>>=) p f =
-  P (fun inp -> match parse p inp with
+  P begin
+    fun inp -> match parse p inp with
       | None -> None
-      | Some(v, out) -> parse (f v) out)
+      | Some(v, out) -> parse (f v) out
+end
 
 let (<|>) p q =
   P (fun inp -> match parse p inp with
@@ -35,6 +62,13 @@ let (<|>) p q =
       | _ as r -> r)
 
 let (let*) x f = x >>= f
+
+let (~~) p q =
+  let* x = p in
+  let* y = q in
+  P(fun inp -> Some((x,y), inp))
+
+let (||>) p f = fmap f p
 
 let pchar c =
   P (fun inp -> match inp with
@@ -64,28 +98,27 @@ let many (p : 'a parser) =
       Some (x::lx, inp)
     )
 
+let any = P(fun inp -> Some(String.get inp 0, String.rest inp))
+
+let forget p = P begin
+  fun inp -> match parse p inp with
+  | Some(_, rest) -> Some([], rest)
+  | None -> Some([], inp)
+end
+
+let ignore p = P begin
+  fun inp -> match parse p inp with
+  | Some(_, rest) -> Some([], rest)
+  | None -> None
+end
+
 let anychar_of cl =
   match cl with
   | x::rest -> List.fold_left (<|>) (pchar x) (List.map pchar rest)
   | [] -> P (fun _ -> None)
 
-let explode s =
-  let rec step lc i =
-    if i = String.length s then lc
-    else step (lc @ [s.[i]]) (i+1)
-  in
-  step [] 0
-let rec combine: char list -> string =
-  function
-  | [] -> ""
-  | c::cl -> (String.make 1 c) ^ (combine cl)
-let rec combine_str: string list -> string =
-  function
-  | [] -> ""
-  | s::sl -> s ^ (combine_str sl)
-
 let anychar_in s =
-  explode s |> anychar_of
+  String.explode s |> anychar_of
 
 let rec sequence: ('a parser list -> 'a list parser) =
   function
@@ -94,11 +127,13 @@ let rec sequence: ('a parser list -> 'a list parser) =
   begin
     let* x = p in
     let* xs = sequence pl in
-    P(fun inp -> Some(x::xs, inp))
+    P(fun inp -> Some(x :: xs, inp))
   end
 
 let sequence_of_chars cl = sequence (List.map pchar cl)
-let sequence_of_string s = sequence_of_chars (explode s)
-let literal s = fmap combine (sequence_of_string s)
+let sequence_of_string s = sequence_of_chars (String.explode s)
+let literal s = sequence_of_string s ||> String.combine
+
+let wrap l r p = sequence [ignore l; p; ignore r]
 
 let parser f = P (fun inp -> f inp)
