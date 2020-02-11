@@ -28,3 +28,12 @@ type s_ast =
   | Declare of string
   | DeclareFun of string * int * int
   | Block of s_ast list
+
+let cstr c =
+  match c with
+  | Lt -> "<"
+  | Le -> "<="
+  | Gt -> ">"
+  | Ge -> ">="
+  | Ne -> "!="
+  | Eq -> "=="
