@@ -18,30 +18,27 @@ type quad =
 
 let rec quad_s s env =
   match s with
-  | Seq (s1, s2) ->
-    let q1 = quad_s s1 env in
-    let q2 = quad_s s2 env in
-    q1 @ q2
   | Set (Id i, e) ->
     begin
       match lookup_opt env i with
       | None -> failwith ("unknow local variable " ^ i)
-      | Some (o, T_int) ->
-        let v = new_tmp env T_int in
+      | Some off ->
+        let v = new_tmp env in
         let q1, v1 = quad_e e env in
-        q1 @ [Q_IFP (v, o); Q_STR (v1, v)]
-      | _ -> failwith "unable to assign non int variables"
+        q1 @ [Q_IFP (v, off); Q_STR (v1, v)]
     end
   | Block s ->
-    let l = new_label env in
-    let q = quad_s s env in
-    [Q_LABEL l] @ q
+    List.fold_left (@) [] (List.map (fun s -> quad_s s env) s)
   | Call (Id i, le) ->
     let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
     let lq, lr = List.split lres in
     let q = List.fold_left (@) [] lq in
     let push = List.map (fun s -> Q_PUSH (s)) lr in
-    q @ push @ [Q_GOTO i]
+    begin
+      match lookup_opt_fun env i with
+      | Some(l, r, p) when (r = 0 && p = List.length le) -> q @ push @ [Q_GOTO l]
+      | _ -> failwith "Error in function call"
+    end
   | If (c, s1, s2) ->
     let _si = new_label env in
     let _sinon = new_label env in
@@ -62,7 +59,21 @@ let rec quad_s s env =
   | Declare s ->
     new_local env s;
     []
-and quad_e _ _ = [], ""
+  | DeclareFun (s, r, p) ->
+    new_function env s r p;
+    []
+
+and quad_e e env = 
+  match e with
+  | Binop (op, e1, e2) ->
+    let r = new_tmp env in
+    let q1, r1 = quad_e e1 env in
+    let q2, r2 = quad_e e2 env in
+    q1 @ q2 @ [ Q_BINOP (op, r, r1, r2)], r
+  | Cst i ->
+    let r = new_tmp env in
+    [Q_SETI (r, i)], r
+  | _ -> [], new_tmp env
 and quad_c c env si sinon =
   let inv c =
     match c with
@@ -80,7 +91,7 @@ and quad_c c env si sinon =
     | Or (c1, c2) ->
       let l = new_label env in
       let q1 = cond c1 env l sinon true in
-      let q2 = cond c1 env si sinon true in
+      let q2 = cond c2 env si sinon true in
       begin
         match List.rev q1 with
         | (Q_GOTO a)::r when a = l -> (List.rev r) @ q2

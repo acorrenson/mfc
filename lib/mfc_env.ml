@@ -8,6 +8,7 @@ type frame = {
 type env = {
   mutable label_counter: int;
   mutable frames : frame list;
+  mutable functions : (string * (string * int * int)) list;
 }
 
 let new_label env =
@@ -32,6 +33,9 @@ let lookup_opt_offset env x =
   | None -> None
   | _ as off -> off
 
+let lookup_opt_fun env f =
+  List.assoc_opt f (env.functions)
+
 
 (** Push a new frame *)
 let push_frame (e:env) =
@@ -51,4 +55,9 @@ let new_local e x =
   l.local_vars <- (x, l.variable_counter)::l.local_vars;
   l.variable_counter <- l.variable_counter + 1
 
-let new_env () = {label_counter = 0; frames = []}
+let new_function e s r p =
+  e.functions <- (s, (Printf.sprintf "function_%s_%d" s (e.label_counter), r, p))::e.functions;
+  e.label_counter <- e.label_counter + 1
+
+
+let new_env () = {label_counter = 0; frames = []; functions = []}
