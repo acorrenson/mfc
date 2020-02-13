@@ -1,6 +1,7 @@
 open Mfc_parsing
 open Mfc_ast
 
+let _sym = many (anychar_in "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ") |> fmap combine
 let _digit = anychar_in "0123456789"
 let _nat =
   many _digit
@@ -50,30 +51,58 @@ let _comp =
   <|> _comp_c Ne
   <|> _comp_c Eq
 
-let _cond inp =
+let rec _cond inp =
   parse (
     (
-      let* c1 = _comp in
-      let* _ = literal "and" |> trim in
-      let* c2 = _comp in
-      P (fun inp -> Some (And (c1, c2), inp))
-    )
-    <|>
-    (
-      let* c1 = _comp in
+      let* c1 = parser _cterm in
       let* _ = literal "or" |> trim in
-      let* c2 = _comp in
+      let* c2 = parser _cond in
       P (fun inp -> Some (Or (c1, c2), inp))
     )
-    <|>
+    <|> parser _cterm
+  ) inp
+and _cterm inp =
+  parse (
+    (
+      let* c1 = parser _cfactor in
+      let* _ = literal "and" |> trim in
+      let* c2 = parser _cterm in
+      P (fun inp -> Some (And (c1, c2), inp))
+    )
+    <|> parser _cfactor
+  ) inp
+and _cfactor inp =
+  parse (
     (
       let* _ = literal "not" |> trim in
-      let* c1 = _comp in
-      P (fun inp -> Some (Not (c1), inp))
+      let* c2 = parser _cfactor in
+      P (fun inp -> Some (Not (c2), inp))
+    )
+    <|> 
+    (
+      let* _ = pchar '(' |> trim in
+      let* c = parser _cond in
+      let* _ = pchar ')' |> trim in
+      P (fun inp -> Some (c, inp))
     )
     <|> _comp
-
   ) inp
+
+let _arglist =
+  some (
+    let* e = parser _expr |> trim in
+    let* _ = pchar ',' in
+    P (fun inp -> Some (e, inp))
+  )
+
+let _args =
+  (
+    let* a = _arglist in
+    let* e = parser _expr |> trim in
+    P (fun inp -> Some (a @ [e], inp))
+  )
+  <|>
+  (optional (parser _expr))
 
 
 let rec _stmt inp =
@@ -94,9 +123,24 @@ let rec _stmt inp =
     )
     <|>
     (
-      let* _ = literal "do" |> trim in
-      let* s = many (anychar_in "abcdefghijklmnopqrstuvwxyz") |> fmap combine |> trim in
-      P (fun inp -> Some (Call (Id s, []), inp))
+      let* _ = literal "var" |> trim in
+      let* s = _sym in
+      P (fun inp -> Some (Declare s, inp))
+    )
+    <|>
+    (
+      let* s = _sym |> trim in
+      let* _ = pchar '=' in
+      let* e = parser _expr |> trim in
+      P (fun inp -> Some (Set(Id s, e), inp))
+    )
+    <|>
+    (
+      let* fn = _sym |> trim in
+      let* _ = pchar '(' |> trim in
+      let* a = _args in
+      let* _ = pchar ')' |> trim in
+      P (fun inp -> Some (Call (Id fn, a), inp))
     )
     <|>
     (

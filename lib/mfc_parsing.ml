@@ -194,3 +194,10 @@ let trim p =
   let* e = p in
   let* _ = some (pchar ' ' <|> pchar '\n' <|> pchar '\t') in
   P (fun inp -> Some(e, inp))
+
+let optional p =
+  P (fun inp ->
+      match parse p inp with
+      | None -> Some ([], inp)
+      | Some (x, next) -> Some ([x], next)
+    )
