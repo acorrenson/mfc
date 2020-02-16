@@ -73,7 +73,30 @@ and quad_e e env =
   | Cst i ->
     let r = new_tmp env in
     [Q_SETI (r, i)], r
-  | _ -> [], new_tmp env
+  | Ref (Id x) ->
+    let r = new_tmp env in
+    begin
+      match lookup_opt env x with
+      | None -> failwith "unknown variable"
+      | Some off -> [Q_IFP (r, off)], r
+    end
+  | Ecall (Id x, le) ->
+    let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
+    let lq, lr = List.split lres in
+    let q = List.fold_left (@) [] lq in
+    let push = List.map (fun s -> Q_PUSH (s)) lr in
+    let ret = new_tmp env in
+    begin
+      match lookup_opt_fun env x with
+      | Some(l, r, p) when (r = 1 && p = List.length le) ->
+        (q @ push @ [Q_GOTO l] @ [Q_POP ret]), ret
+      | _ -> failwith "Error in function call"
+    end
+  | Unop (op, e1) ->
+    let q1, r1 = quad_e e1 env in
+    let r = new_tmp env in
+    (q1 @ [Q_UNOP (op, r, r1)]), r
+
 and quad_c c env si sinon =
   let inv c =
     match c with
