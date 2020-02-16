@@ -30,3 +30,5 @@ _opam/
 
 # VS Code Live Share
 *.vsls.json
+
+.vscode/
