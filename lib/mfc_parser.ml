@@ -34,15 +34,16 @@ and _factor inp =
       let* e = parser _expr in
       let* _ = pchar ')' |> trim in
       P (fun inp -> Some (e, inp))
-    ) <|> _nat
+    ) <|> _nat <|> (_sym |> trim |> fmap (fun x -> Ref (Id x)))
   ) inp
 
 let _comp_c c =
-  let* l = parser _expr |> trim in
-  let* _ = literal (cstr c) |> trim in
-  let* r = parser _expr |> trim in
-  P (fun inp -> Some (Cmp (c, l, r), inp))
-
+  (
+    let* l = parser _expr |> trim in
+    let* _ = literal (cstr c) |> trim in
+    let* r = parser _expr |> trim in
+    P (fun inp -> Some (Cmp (c, l, r), inp))
+  )
 let _comp =
   _comp_c Lt
   <|> _comp_c Le
@@ -154,3 +155,7 @@ let rec _stmt inp =
       P (fun inp -> Some (While (c, s), inp))
     )
   ) inp
+
+let _prog =
+  let* def = many (parser _stmt) in
+  P (fun inp -> Some (Block (def), inp))

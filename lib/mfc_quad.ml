@@ -74,11 +74,12 @@ and quad_e e env =
     let r = new_tmp env in
     [Q_SETI (r, i)], r
   | Ref (Id x) ->
-    let r = new_tmp env in
+    let r1 = new_tmp env in
+    let r2 = new_tmp env in
     begin
       match lookup_opt env x with
       | None -> failwith "unknown variable"
-      | Some off -> [Q_IFP (r, off)], r
+      | Some off -> [Q_IFP (r1, off); Q_LD (r2, r1)], r2
     end
   | Ecall (Id x, le) ->
     let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
@@ -142,3 +143,45 @@ and quad_c c env si sinon =
 
 
 
+let rec print_quads lq =
+  match lq with
+  | [] -> ()
+  | Q_BINOP (op, r1, r2, r3)::r ->
+    Printf.printf "%-4s %s, %s, %s\n" (bstr op) r1 r2 r3;
+    print_quads r
+  | Q_GOTO l::r ->
+    Printf.printf "goto %s\n" l;
+    print_quads r
+  | Q_LABEL l::r ->
+    Printf.printf "%s:\n" l;
+    print_quads r
+  | Q_POP l::r ->
+    Printf.printf "pop  %s\n" l;
+    print_quads r
+  | Q_PUSH l::r ->
+    Printf.printf "push %s\n" l;
+    print_quads r
+  | Q_LD (a, v)::r ->
+    Printf.printf "ldr  %s, [%s]\n" a v;
+    print_quads r
+  | Q_STR (a, v)::r ->
+    Printf.printf "str  [%s], %s\n" a v;
+    print_quads r
+  | Q_SET (a, b)::r ->
+    Printf.printf "mov  %s, %s\n" a b;
+    print_quads r
+  | Q_SETI (a, b)::r ->
+    Printf.printf "mov  %s, %d\n" a b;
+    print_quads r
+  | Q_UNOP (_, b, c)::r ->
+    Printf.printf "%-4s %s, %s\n" ("not") b c;
+    print_quads r
+  | Q_IFP (a, b)::r ->
+    Printf.printf "add  %s, FP, %d\n" a b;
+    print_quads r
+  | Q_CMP (a, b)::r ->
+    Printf.printf "cmp  %s, %s\n" a b;
+    print_quads r
+  | Q_BRANCH (c, a)::r ->
+    Printf.printf "b%s  %s\n" (cstr c) a;
+    print_quads r

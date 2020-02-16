@@ -37,3 +37,9 @@ let cstr c =
   | Ge -> ">="
   | Ne -> "!="
   | Eq -> "=="
+
+let bstr b =
+  match b with
+  | Add -> "add"
+  | Sub -> "sub"
+  | Mult -> "mul"
