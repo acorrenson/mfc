@@ -29,7 +29,7 @@ type s_ast =
   | DeclareFun of string * int * int
   | Block of s_ast list
 
-let cstr c =
+let csym c =
   match c with
   | Lt -> "<"
   | Le -> "<="
@@ -37,6 +37,15 @@ let cstr c =
   | Ge -> ">="
   | Ne -> "!="
   | Eq -> "=="
+
+let cstr c =
+  match c with
+  | Lt -> "lt"
+  | Le -> "le"
+  | Gt -> "gt"
+  | Ge -> "ge"
+  | Ne -> "ne"
+  | Eq -> "eq"
 
 let bstr b =
   match b with

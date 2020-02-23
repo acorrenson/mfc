@@ -1,3 +1,34 @@
+(** Module for Abstract Identifier manipulation *)
+module IdType :
+sig
+  type 'a reg
+  type 'a lab
+
+  (** Instanciate a register *)
+  val reg : int -> [`Reg] reg
+
+  (** Instanciate a label *)
+  val lab : int -> [`Lab] lab
+
+  (** Instanciate a named label *)
+  val nlab : string -> [`Lab] lab
+
+  (** Register to int *)
+  val reg_to_int : 'a reg -> int
+
+  (** Label to string *)
+  val lab_to_string : 'a lab -> string
+end = struct
+  type 'a reg = int
+  type 'a lab = string
+  let reg i = i
+  let lab i = Printf.sprintf "label_%d" i
+  let nlab i = i
+  let reg_to_int r = r
+  let lab_to_string r = r
+end
+
+
 (** A frame (in the stack) *)
 type frame = {
   mutable variable_counter: int;
@@ -8,16 +39,16 @@ type frame = {
 type env = {
   mutable label_counter: int;
   mutable frames : frame list;
-  mutable functions : (string * (string * int * int)) list;
+  mutable functions : (string * ([`Lab] IdType.lab * int * int)) list;
 }
 
 let new_label env =
-  let l = Printf.sprintf "label_%d" env.label_counter in
+  let l = IdType.lab env.label_counter in
   env.label_counter <- env.label_counter + 1;
   l
 
 let new_tmp env =
-  let l = Printf.sprintf "reg_%d" env.label_counter in
+  let l = IdType.reg env.label_counter in
   env.label_counter <- env.label_counter + 1;
   l
 
@@ -56,8 +87,7 @@ let new_local e x =
   l.variable_counter <- l.variable_counter + 1
 
 let new_function e s r p =
-  e.functions <- (s, (Printf.sprintf "function_%s_%d" s (e.label_counter), r, p))::e.functions;
-  e.label_counter <- e.label_counter + 1
+  e.functions <- (s, (IdType.nlab s, r, p))::e.functions
 
 
 let new_env () = {label_counter = 0; frames = []; functions = []}

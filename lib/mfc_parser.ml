@@ -40,7 +40,7 @@ and _factor inp =
 let _comp_c c =
   (
     let* l = parser _expr |> trim in
-    let* _ = literal (cstr c) |> trim in
+    let* _ = literal (csym c) |> trim in
     let* r = parser _expr |> trim in
     P (fun inp -> Some (Cmp (c, l, r), inp))
   )
