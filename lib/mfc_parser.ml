@@ -150,9 +150,9 @@ let rec _stmt inp =
       let* c = parser _cond in
       let* _ = pchar ')' |> trim in
       let* _ = pchar '{' |> trim in
-      let* s = parser _stmt |> trim in
+      let* s = many (parser _stmt) |> trim in
       let* _ = pchar '}' |> trim in
-      P (fun inp -> Some (While (c, s), inp))
+      P (fun inp -> Some (While (c, Block s), inp))
     )
   ) inp
 

@@ -1,26 +1,26 @@
 (** Module for Abstract Identifier manipulation *)
 module IdType :
 sig
-  type 'a reg
-  type 'a lab
+  type reg
+  type lab
 
   (** Instanciate a register *)
-  val reg : int -> [`Reg] reg
+  val reg : int -> reg
 
   (** Instanciate a label *)
-  val lab : int -> [`Lab] lab
+  val lab : int -> lab
 
   (** Instanciate a named label *)
-  val nlab : string -> [`Lab] lab
+  val nlab : string -> lab
 
   (** Register to int *)
-  val reg_to_int : 'a reg -> int
+  val reg_to_int : reg -> int
 
   (** Label to string *)
-  val lab_to_string : 'a lab -> string
+  val lab_to_string : lab -> string
 end = struct
-  type 'a reg = int
-  type 'a lab = string
+  type reg = int
+  type lab = string
   let reg i = i
   let lab i = Printf.sprintf "label_%d" i
   let nlab i = i
@@ -39,7 +39,7 @@ type frame = {
 type env = {
   mutable label_counter: int;
   mutable frames : frame list;
-  mutable functions : (string * ([`Lab] IdType.lab * int * int)) list;
+  mutable functions : (string * (IdType.lab * int * int)) list;
 }
 
 let new_label env =

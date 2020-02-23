@@ -1,8 +1,6 @@
 var x
-while (x < 2) {
-    if (1 == 2) {
-      print(1)
-    } else {
-      print(1)
-    }
-  }
+x = 0
+while (x < 10) {
+  print(x)
+  x = x + 1
+}

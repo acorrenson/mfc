@@ -20,9 +20,19 @@ let generate ic =
   print_endline "@ ==================";
   print_endline "@ generated with mfc";
   print_endline "@ ==================";
+  print_endline "int_format: .asciz \"%d\"";
+  print_endline ".align";
+  print_endline "print:";
+  print_endline "ldr r0, =int_format";
+  print_endline "pop {r1}";
+  print_endline "push {lr}";
+  print_endline "bl printf";
+  print_endline "pop {pc}";
   print_endline ".global main";
+  print_endline ".extern printf";
   print_endline "main:";
-  parse _prog data |> 
+  print_endline "push {lr}";
+  parse _prog data |>
   (function
     | Some (ast, "") -> quad_s ast env |> print_quads
     | _ -> failwith "parse error");

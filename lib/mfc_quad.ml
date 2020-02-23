@@ -1,8 +1,8 @@
 open Mfc_ast
 open Mfc_env
 
-type treg = [`Reg] IdType.reg
-type tlab = [`Lab] IdType.lab
+type treg = IdType.reg
+type tlab = IdType.lab
 
 type quad =
   | Q_BINOP of binop * treg * treg * treg
@@ -16,6 +16,7 @@ type quad =
   | Q_PUSH of treg
   | Q_POP of treg
   | Q_GOTO of tlab
+  | Q_BRANCH_LINK of tlab
   | Q_CMP of treg * treg
   | Q_BRANCH of compare * tlab
 
@@ -39,7 +40,7 @@ let rec quad_s s env =
     let push = List.map (fun s -> Q_PUSH (s)) lr in
     begin
       match lookup_opt_fun env i with
-      | Some (l, r, p) when (r = 0 && p = List.length le) -> q @ push @ [Q_GOTO l]
+      | Some (l, r, p) when (r = 0 && p = List.length le) -> q @ push @ [Q_BRANCH_LINK l]
       | _ -> failwith "Error in function call"
     end
   | If (c, s1, s2) ->
@@ -55,7 +56,7 @@ let rec quad_s s env =
     let _end = new_label env in
     let qc = quad_c c env _body _end in
     let q = quad_s s env in
-    [Q_LABEL _loop] @ qc @ [Q_LABEL _body] @ q @ [Q_LABEL _end]
+    [Q_LABEL _loop] @ qc @ [Q_LABEL _body] @ q @ [Q_GOTO _loop; Q_LABEL _end]
   | Ret e ->
     let qe, ve = quad_e e env in
     qe @ [Q_PUSH ve]
@@ -93,7 +94,7 @@ and quad_e e env =
     begin
       match lookup_opt_fun env x with
       | Some(l, r, p) when (r = 1 && p = List.length le) ->
-        (q @ push @ [Q_GOTO l] @ [Q_POP ret]), ret
+        (q @ push @ [Q_BRANCH_LINK l] @ [Q_POP ret]), ret
       | _ -> failwith "Error in function call"
     end
   | Unop (op, e1) ->
@@ -152,41 +153,44 @@ let rec print_quads lq =
     let r1' = reg_to_int r1 in
     let r2' = reg_to_int r2 in
     let r3' = reg_to_int r3 in
-    Printf.printf "%-4s reg_%d, reg_%d, reg_%d\n" (bstr op) r1' r2' r3';
+    Printf.printf "%-4s r%d, r%d, r%d\n" (bstr op) r1' r2' r3';
     print_quads r
   | Q_GOTO l::r ->
-    Printf.printf "goto %s\n" (l |> IdType.lab_to_string);
+    Printf.printf "b %s\n" (l |> IdType.lab_to_string);
     print_quads r
   | Q_LABEL l::r ->
     Printf.printf "%s:\n" (IdType.lab_to_string l);
     print_quads r
   | Q_POP l::r ->
-    Printf.printf "pop  reg_%d\n" (IdType.reg_to_int l);
+    Printf.printf "pop  r%d\n" (IdType.reg_to_int l);
     print_quads r
   | Q_PUSH l::r ->
-    Printf.printf "push reg_%d\n" (IdType.reg_to_int l);
+    Printf.printf "push {r%d}\n" (IdType.reg_to_int l);
     print_quads r
   | Q_LD (a, v)::r ->
-    Printf.printf "ldr  reg_%d, [reg_%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
+    Printf.printf "ldr  r%d, [r%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
     print_quads r
   | Q_STR (a, v)::r ->
-    Printf.printf "str  [reg_%d], reg_%d\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
+    Printf.printf "str  r%d, [r%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
     print_quads r
   | Q_SET (a, b)::r ->
-    Printf.printf "mov  reg_%d, reg_%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
+    Printf.printf "mov  r%d, r%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
     print_quads r
   | Q_SETI (a, b)::r ->
-    Printf.printf "mov  reg_%d, #%d\n" (IdType.reg_to_int a) b;
+    Printf.printf "mov  r%d, #%d\n" (IdType.reg_to_int a) b;
     print_quads r
   | Q_UNOP (_, b, c)::r ->
-    Printf.printf "%-4s reg_%d, reg_%d\n" ("not") (IdType.reg_to_int b) (IdType.reg_to_int c);
+    Printf.printf "%-4s r%d, r%d\n" ("not") (IdType.reg_to_int b) (IdType.reg_to_int c);
     print_quads r
   | Q_IFP (a, b)::r ->
-    Printf.printf "add  reg_%d, FP, #%d\n" (IdType.reg_to_int a) b;
+    Printf.printf "add  r%d, SP, #%d\n" (IdType.reg_to_int a) b;
     print_quads r
   | Q_CMP (a, b)::r ->
-    Printf.printf "cmp  reg_%d, reg_%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
+    Printf.printf "cmp  r%d, r%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
     print_quads r
   | Q_BRANCH (c, a)::r ->
     Printf.printf "b%s  %s\n" (cstr c) (IdType.lab_to_string a);
+    print_quads r
+  | Q_BRANCH_LINK (l)::r ->
+    Printf.printf "bl %s\n" (IdType.lab_to_string l);
     print_quads r
