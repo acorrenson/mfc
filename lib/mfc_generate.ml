@@ -20,7 +20,7 @@ let generate ic =
   print_endline "@ ==================";
   print_endline "@ generated with mfc";
   print_endline "@ ==================";
-  print_endline "int_format: .asciz \"%d\"";
+  print_endline "int_format: .asciz \"%d\\n\"";
   print_endline ".align";
   print_endline "print:";
   print_endline "ldr r0, =int_format";

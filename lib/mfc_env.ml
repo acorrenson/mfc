@@ -52,6 +52,9 @@ let new_tmp env =
   env.label_counter <- env.label_counter + 1;
   l
 
+let clr_tmp env n =
+  env.label_counter <- env.label_counter - n
+
 (** Lookup for local variable x (type and offset) *)
 let lookup_opt env x =
   match env.frames with

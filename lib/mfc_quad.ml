@@ -6,6 +6,7 @@ type tlab = IdType.lab
 
 type quad =
   | Q_BINOP of binop * treg * treg * treg
+  | Q_BINOPI of binop * treg * treg * int
   | Q_IFP of treg * int
   | Q_UNOP of unop * treg * treg
   | Q_SET of treg * treg
@@ -29,6 +30,7 @@ let rec quad_s s env =
       | Some off ->
         let v = new_tmp env in
         let q1, v1 = quad_e e env in
+        clr_tmp env 1;
         q1 @ [Q_IFP (v, off); Q_STR (v1, v)]
     end
   | Block s ->
@@ -38,6 +40,7 @@ let rec quad_s s env =
     let lq, lr = List.split lres in
     let q = List.fold_left (@) [] lq in
     let push = List.map (fun s -> Q_PUSH (s)) lr in
+    clr_tmp env (List.length le);
     begin
       match lookup_opt_fun env i with
       | Some (l, r, p) when (r = 0 && p = List.length le) -> q @ push @ [Q_BRANCH_LINK l]
@@ -69,6 +72,10 @@ let rec quad_s s env =
 
 and quad_e e env = 
   match e with
+  | Binop (op, e1, Cst i) ->
+    let r = new_tmp env in
+    let q1, r1 = quad_e e1 env in
+    q1 @ [ Q_BINOPI (op, r, r1, i)], r
   | Binop (op, e1, e2) ->
     let r = new_tmp env in
     let q1, r1 = quad_e e1 env in
@@ -91,6 +98,7 @@ and quad_e e env =
     let q = List.fold_left (@) [] lq in
     let push = List.map (fun s -> Q_PUSH (s)) lr in
     let ret = new_tmp env in
+    clr_tmp env 1;
     begin
       match lookup_opt_fun env x with
       | Some(l, r, p) when (r = 1 && p = List.length le) ->
@@ -137,6 +145,7 @@ and quad_c c env si sinon =
     | Cmp (c, e1, e2) ->
       let q1, v1 = quad_e e1 env in
       let q2, v2 = quad_e e2 env in
+      clr_tmp env 2;
       if p then
         q1 @ q2 @ [Q_CMP (v1, v2); Q_BRANCH (c, si); Q_GOTO sinon]
       else
@@ -154,6 +163,12 @@ let rec print_quads lq =
     let r2' = reg_to_int r2 in
     let r3' = reg_to_int r3 in
     Printf.printf "%-4s r%d, r%d, r%d\n" (bstr op) r1' r2' r3';
+    print_quads r
+  | Q_BINOPI (op, r1, r2, i)::r ->
+    let open IdType in
+    let r1' = reg_to_int r1 in
+    let r2' = reg_to_int r2 in
+    Printf.printf "%-4s r%d, r%d, #%d\n" (bstr op) r1' r2' i;
     print_quads r
   | Q_GOTO l::r ->
     Printf.printf "b %s\n" (l |> IdType.lab_to_string);
