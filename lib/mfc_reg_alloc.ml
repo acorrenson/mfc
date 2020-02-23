@@ -1,6 +1,9 @@
 open Mfc_quad
 open Mfc_env
+open Graph
+open Pack
 module IntSet = Set.Make(Int)
+module Color = Coloring.Make(Graph)
 
 (** Compute lifes of each virtual register *)
 let get_lifes ql rc =
@@ -54,3 +57,19 @@ let inter_mat arr =
     done
   done;
   mat
+
+let inter_graph mat =
+  let g = Graph.create () in
+  let l = Array.length mat in
+  let e = List.init l (fun i -> Graph.V.create i) in
+  let a = Array.of_list e in
+  for i = 0 to l - 1 do
+    for j = 0 to l - 1 do
+      if mat.(i).(j) then (
+        Graph.add_edge g a.(i) a.(j)
+      )
+    done
+  done;
+  Graph.dot_output g "test.dot";
+  let m = Color.coloring g 15 in
+  Array.iteri (fun i x -> Color.H.find m x |> Printf.printf "%d -> %d\n" i) a

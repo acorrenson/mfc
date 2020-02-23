@@ -23,5 +23,5 @@ let _ =
     let arr = get_lifes ql rc in
     let p = fun s -> IntSet.iter (fun i -> print_int i; print_char ' ') s; print_newline () in
     Array.iter p arr;
-    inter_mat arr
+    inter_mat arr |> inter_graph
   | _ -> failwith "parse error"
