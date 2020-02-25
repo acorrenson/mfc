@@ -2,6 +2,7 @@ open Mfc_quad
 open Mfc_env
 open Graph
 open Pack
+
 module IntSet = Set.Make(Int)
 module Color = Coloring.Make(Graph)
 
@@ -57,6 +58,28 @@ let inter_mat arr =
     done
   done;
   mat
+(*
+let recolor g color =
+  let color x = color x |> function
+    | 0 -> "red"
+    | 1 -> "orange"
+    | 2 -> "yellow"
+    | 3 -> "cyan"
+    | 4 -> "green"
+    | 5 -> "blue"
+    | 6 -> "pink"
+    | 7 -> "purple"
+    | 8 -> "grey"
+    | 9 -> "brown"
+    | 10 -> "magenta"
+    | _ -> ""
+  in
+  let open Printf in
+  print_endline "Graph {";
+  Graph.iter_vertex (fun v -> printf "\t%d [style=\"filled\"; color=\"%s\"];\n" (Graph.V.label v) (color v)) g;
+  Graph.iter_edges (fun s d -> printf "\t%d -- %d;\n" (Graph.V.label s) (Graph.V.label d)) g;
+  print_endline "}"
+*)
 
 let inter_graph mat =
   let g = Graph.create () in
@@ -70,6 +93,30 @@ let inter_graph mat =
       )
     done
   done;
-  Graph.dot_output g "test.dot";
+  g
+
+let reg_alloc g =
   let m = Color.coloring g 15 in
-  Array.iteri (fun i x -> Color.H.find m x |> Printf.printf "%d -> %d\n" i) a
+  Color.H.find m
+
+let dot_color f g =
+  let open Printf in
+  let oc = open_out f in
+  let color x = reg_alloc g x |> function
+    | 0 -> "red"
+    | 1 -> "orange"
+    | 2 -> "yellow"
+    | 3 -> "cyan"
+    | 4 -> "green"
+    | 5 -> "blue"
+    | 6 -> "pink"
+    | 7 -> "purple"
+    | 8 -> "grey"
+    | 9 -> "brown"
+    | 10 -> "magenta"
+    | _ -> ""
+  in
+  fprintf oc "Graph {\n";
+  Graph.iter_vertex (fun v -> fprintf oc "\t%d [style=\"filled\"; color=\"%s\"];\n" (Graph.V.label v) (color v)) g;
+  Graph.iter_edges (fun s d -> fprintf oc "\t%d -- %d;\n" (Graph.V.label s) (Graph.V.label d)) g;
+  fprintf oc "}\n"

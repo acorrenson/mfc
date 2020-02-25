@@ -30,7 +30,7 @@ let rec quad_s s env =
       | Some off ->
         let v = new_tmp env in
         let q1, v1 = quad_e e env in
-        clr_tmp env 1;
+        (* clr_tmp env 1; *)
         q1 @ [Q_IFP (v, off); Q_STR (v1, v)]
     end
   | Block s ->
@@ -40,7 +40,7 @@ let rec quad_s s env =
     let lq, lr = List.split lres in
     let q = List.fold_left (@) [] lq in
     let push = List.map (fun s -> Q_PUSH (s)) lr in
-    clr_tmp env (List.length le);
+    (* clr_tmp env (List.length le); *)
     begin
       match lookup_opt_fun env i with
       | Some (l, r, p) when (r = 0 && p = List.length le) -> q @ push @ [Q_BRANCH_LINK l]
@@ -98,7 +98,7 @@ and quad_e e env =
     let q = List.fold_left (@) [] lq in
     let push = List.map (fun s -> Q_PUSH (s)) lr in
     let ret = new_tmp env in
-    clr_tmp env 1;
+    (* clr_tmp env 1; *)
     begin
       match lookup_opt_fun env x with
       | Some(l, r, p) when (r = 1 && p = List.length le) ->
@@ -145,7 +145,7 @@ and quad_c c env si sinon =
     | Cmp (c, e1, e2) ->
       let q1, v1 = quad_e e1 env in
       let q2, v2 = quad_e e2 env in
-      clr_tmp env 2;
+      (* clr_tmp env 2; *)
       if p then
         q1 @ q2 @ [Q_CMP (v1, v2); Q_BRANCH (c, si); Q_GOTO sinon]
       else
