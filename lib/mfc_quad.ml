@@ -1,26 +1,44 @@
+(**************************************************************************)
+(*                                                                        *)
+(*                      This file is part of MFC                          *)
+(*                  it is released under MIT license.                     *)
+(*                https://opensource.org/licenses/MIT                     *)
+(*                                                                        *)
+(*          Copyright (c) 2020 Arthur Correnson, Nathan Graule            *)
+(**************************************************************************)
+
 open Mfc_ast
 open Mfc_env
 
-type treg = IdType.reg
-type tlab = IdType.lab
+(** Alias for virtual registers *)
+type vreg = IdType.reg
 
+(** Alias for virtual labels *)
+type vlab = IdType.lab
+
+(** Type for (ARM-like) quads *)
 type quad =
-  | Q_BINOP of binop * treg * treg * treg
-  | Q_BINOPI of binop * treg * treg * int
-  | Q_IFP of treg * int
-  | Q_UNOP of unop * treg * treg
-  | Q_SET of treg * treg
-  | Q_SETI of treg * int
-  | Q_STR of treg * treg
-  | Q_LD of treg * treg
-  | Q_LABEL of tlab
-  | Q_PUSH of treg
-  | Q_POP of treg
-  | Q_GOTO of tlab
-  | Q_BRANCH_LINK of tlab
-  | Q_CMP of treg * treg
-  | Q_BRANCH of compare * tlab
+  | Q_BINOP of binop * vreg * vreg * vreg
+  | Q_BINOPI of binop * vreg * vreg * int
+  | Q_IFP of vreg * int
+  | Q_UNOP of unop * vreg * vreg
+  | Q_SET of vreg * vreg
+  | Q_SETI of vreg * int
+  | Q_STR of vreg * vreg
+  | Q_LDR of vreg * vreg
+  | Q_LABEL of vlab
+  | Q_PUSH of vreg
+  | Q_POP of vreg
+  | Q_GOTO of vlab
+  | Q_BRANCH_LINK of vlab
+  | Q_CMP of vreg * vreg
+  | Q_BRANCH of compare * vlab
 
+(**
+   Generate quads for Statements ({!Mfc_ast.s_ast})
+   @param s     statement ast
+   @param env   environement ({!Mfc_env.env})
+*)
 let rec quad_s s env =
   match s with
   | Set (Id i, e) ->
@@ -30,7 +48,6 @@ let rec quad_s s env =
       | Some off ->
         let v = new_tmp env in
         let q1, v1 = quad_e e env in
-        (* clr_tmp env 1; *)
         q1 @ [Q_IFP (v, off); Q_STR (v1, v)]
     end
   | Block s ->
@@ -40,7 +57,6 @@ let rec quad_s s env =
     let lq, lr = List.split lres in
     let q = List.fold_left (@) [] lq in
     let push = List.map (fun s -> Q_PUSH (s)) lr in
-    (* clr_tmp env (List.length le); *)
     begin
       match lookup_opt_fun env i with
       | Some (l, r, p) when (r = 0 && p = List.length le) -> q @ push @ [Q_BRANCH_LINK l]
@@ -70,6 +86,11 @@ let rec quad_s s env =
     new_function env s r p;
     []
 
+(**
+   Generate quad for Expressions ({!Mfc_ast.e_ast})
+   @param e     expression ast
+   @param env   current env ({!Mfc_env.env})
+*)
 and quad_e e env = 
   match e with
   | Binop (op, e1, Cst i) ->
@@ -90,7 +111,7 @@ and quad_e e env =
     begin
       match lookup_opt env x with
       | None -> failwith "unknown variable"
-      | Some off -> [Q_IFP (r1, off); Q_LD (r2, r1)], r2
+      | Some off -> [Q_IFP (r1, off); Q_LDR (r2, r1)], r2
     end
   | Ecall (Id x, le) ->
     let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
@@ -98,7 +119,6 @@ and quad_e e env =
     let q = List.fold_left (@) [] lq in
     let push = List.map (fun s -> Q_PUSH (s)) lr in
     let ret = new_tmp env in
-    (* clr_tmp env 1; *)
     begin
       match lookup_opt_fun env x with
       | Some(l, r, p) when (r = 1 && p = List.length le) ->
@@ -110,6 +130,13 @@ and quad_e e env =
     let r = new_tmp env in
     (q1 @ [Q_UNOP (op, r, r1)]), r
 
+(**
+    Generate quads for tests ({!Mfc_ast.c_ast})
+    @param c      condition ast
+    @param env    current env ({!Mfc_env.env})
+    @param si     label to target if test succeed
+    @param sinon  label to target if test fails
+*)
 and quad_c c env si sinon =
   let inv c =
     match c with
@@ -145,7 +172,6 @@ and quad_c c env si sinon =
     | Cmp (c, e1, e2) ->
       let q1, v1 = quad_e e1 env in
       let q2, v2 = quad_e e2 env in
-      (* clr_tmp env 2; *)
       if p then
         q1 @ q2 @ [Q_CMP (v1, v2); Q_BRANCH (c, si); Q_GOTO sinon]
       else
@@ -153,7 +179,10 @@ and quad_c c env si sinon =
   in
   cond c env si sinon true
 
-
+(**
+   Pretty print quad list
+   @param lq   quad list
+*)
 let rec print_quads lq =
   match lq with
   | [] -> ()
@@ -182,7 +211,7 @@ let rec print_quads lq =
   | Q_PUSH l::r ->
     Printf.printf "push {r%d}\n" (IdType.reg_to_int l);
     print_quads r
-  | Q_LD (a, v)::r ->
+  | Q_LDR (a, v)::r ->
     Printf.printf "ldr  r%d, [r%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
     print_quads r
   | Q_STR (a, v)::r ->

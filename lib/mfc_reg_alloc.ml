@@ -1,9 +1,21 @@
+(**************************************************************************)
+(*                                                                        *)
+(*                      This file is part of MFC                          *)
+(*                  it is released under MIT license.                     *)
+(*                https://opensource.org/licenses/MIT                     *)
+(*                                                                        *)
+(*          Copyright (c) 2020 Arthur Correnson, Nathan Graule            *)
+(**************************************************************************)
+
 open Mfc_quad
 open Mfc_env
 open Graph
 open Pack
 
+(** Set of integer *)
 module IntSet = Set.Make(Int)
+
+(** Graph K-coloring module *)
 module Color = Coloring.Make(Graph)
 
 (** Compute lifes of each virtual register *)
@@ -33,15 +45,15 @@ let get_lifes ql rc =
     match q with
     | Q_BINOP (_, r1, r2, r3) -> save3 i r1 r2 r3
     | Q_BINOPI (_, r1, r2, _) -> save2 i r1 r2
-    | Q_CMP (r1, r2) -> save2 i r1 r2
-    | Q_IFP (r1, _) -> save1 i r1
-    | Q_LD (r1, r2) -> save2 i r1 r2
-    | Q_POP (r1) -> save1 i r1
-    | Q_PUSH (r1) -> save1 i r1
-    | Q_SET (r1, r2) -> save2 i r1 r2
-    | Q_SETI (r1, _) -> save1 i r1
-    | Q_STR (r1, r2) -> save2 i r1 r2
-    | Q_UNOP (_, r1, r2) -> save2 i r1 r2
+    | Q_CMP (r1, r2)          -> save2 i r1 r2
+    | Q_IFP (r1, _)           -> save1 i r1
+    | Q_LDR (r1, r2)          -> save2 i r1 r2
+    | Q_POP (r1)              -> save1 i r1
+    | Q_PUSH (r1)             -> save1 i r1
+    | Q_SET (r1, r2)          -> save2 i r1 r2
+    | Q_SETI (r1, _)          -> save1 i r1
+    | Q_STR (r1, r2)          -> save2 i r1 r2
+    | Q_UNOP (_, r1, r2)      -> save2 i r1 r2
     | _ -> ()
   in
   List.iteri update ql;
@@ -101,7 +113,15 @@ let dot_output_color f g =
     | _ -> ""
   in
   fprintf oc "Graph {\n";
-  Graph.iter_vertex (fun v -> fprintf oc "\t%d [style=\"filled\"; color=\"%s\"];\n" (Graph.V.label v) (color v)) g;
-  Graph.iter_edges (fun s d -> fprintf oc "\t%d -- %d;\n" (Graph.V.label s) (Graph.V.label d)) g;
+  Graph.iter_vertex (fun v ->
+      fprintf oc "\t%d [style=\"filled\"; color=\"%s\"];\n" 
+        (Graph.V.label v) 
+        (color v)
+    ) g;
+  Graph.iter_edges (fun s d ->
+      fprintf oc "\t%d -- %d;\n" 
+        (Graph.V.label s)
+        (Graph.V.label d)
+    ) g;
   fprintf oc "}\n";
   close_out oc
