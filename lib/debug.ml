@@ -1,4 +1,3 @@
-
 open Mfc
 open Mfc_generate
 open Mfc_parsing
@@ -19,9 +18,9 @@ let _ =
     push_frame env;
     new_function env "print" 0 1;
     let ql = quad_s ast env in
-    let rc = env.label_counter+1 in
-    let arr = get_lifes ql rc in
-    let p = fun s -> IntSet.iter (fun i -> print_int i; print_char ' ') s; print_newline () in
-    Array.iter p arr;
-    inter_mat arr |> inter_graph |> dot_color "test.dot"
+    let rc = env.tmp_counter+1 in
+    get_lifes ql rc (* Register lifes *)
+    |> inter_mat    (* Interference matrix *)
+    |> inter_graph  (* Interference graph *)
+    |> dot_output_color "test.dot"
   | _ -> failwith "parse error"

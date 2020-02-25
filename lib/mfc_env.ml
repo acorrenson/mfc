@@ -38,6 +38,7 @@ type frame = {
 (** A complete environment associated with a program *)
 type env = {
   mutable label_counter: int;
+  mutable tmp_counter: int;
   mutable frames : frame list;
   mutable functions : (string * (IdType.lab * int * int)) list;
 }
@@ -48,12 +49,12 @@ let new_label env =
   l
 
 let new_tmp env =
-  let l = IdType.reg env.label_counter in
-  env.label_counter <- env.label_counter + 1;
+  let l = IdType.reg env.tmp_counter in
+  env.tmp_counter <- env.tmp_counter + 1;
   l
 
 let clr_tmp env n =
-  env.label_counter <- env.label_counter - n
+  env.label_counter <- env.tmp_counter - n
 
 (** Lookup for local variable x (type and offset) *)
 let lookup_opt env x =
@@ -93,4 +94,4 @@ let new_function e s r p =
   e.functions <- (s, (IdType.nlab s, r, p))::e.functions
 
 
-let new_env () = {label_counter = 0; frames = []; functions = []}
+let new_env () = {label_counter = 0; tmp_counter = 0; frames = []; functions = []}

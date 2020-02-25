@@ -47,6 +47,7 @@ let get_lifes ql rc =
   List.iteri update ql;
   lifes
 
+(** Compute inteference matrix from virtual register lifes *)
 let inter_mat arr =
   let len = Array.length arr in
   let mat = Array.make_matrix len len false in
@@ -58,29 +59,8 @@ let inter_mat arr =
     done
   done;
   mat
-(*
-let recolor g color =
-  let color x = color x |> function
-    | 0 -> "red"
-    | 1 -> "orange"
-    | 2 -> "yellow"
-    | 3 -> "cyan"
-    | 4 -> "green"
-    | 5 -> "blue"
-    | 6 -> "pink"
-    | 7 -> "purple"
-    | 8 -> "grey"
-    | 9 -> "brown"
-    | 10 -> "magenta"
-    | _ -> ""
-  in
-  let open Printf in
-  print_endline "Graph {";
-  Graph.iter_vertex (fun v -> printf "\t%d [style=\"filled\"; color=\"%s\"];\n" (Graph.V.label v) (color v)) g;
-  Graph.iter_edges (fun s d -> printf "\t%d -- %d;\n" (Graph.V.label s) (Graph.V.label d)) g;
-  print_endline "}"
-*)
 
+(** Compute inteference graph from virtual interference matrix *)
 let inter_graph mat =
   let g = Graph.create () in
   let l = Array.length mat in
@@ -95,11 +75,13 @@ let inter_graph mat =
   done;
   g
 
+(** Perform register allocation, returns a int -> int map *)
 let reg_alloc g =
-  let m = Color.coloring g 15 in
+  let m = Color.coloring g 12 in
   Color.H.find m
 
-let dot_color f g =
+(** Perform reg allocation and output the result to a dot file *)
+let dot_output_color f g =
   let open Printf in
   let oc = open_out f in
   let color x = reg_alloc g x |> function
@@ -114,9 +96,12 @@ let dot_color f g =
     | 8 -> "grey"
     | 9 -> "brown"
     | 10 -> "magenta"
+    | 11 -> "chartreuse"
+    | 12 -> "crimson"
     | _ -> ""
   in
   fprintf oc "Graph {\n";
   Graph.iter_vertex (fun v -> fprintf oc "\t%d [style=\"filled\"; color=\"%s\"];\n" (Graph.V.label v) (color v)) g;
   Graph.iter_edges (fun s d -> fprintf oc "\t%d -- %d;\n" (Graph.V.label s) (Graph.V.label d)) g;
-  fprintf oc "}\n"
+  fprintf oc "}\n";
+  close_out oc
