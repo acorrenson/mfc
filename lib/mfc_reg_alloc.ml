@@ -12,52 +12,42 @@ open Mfc_env
 open Graph
 open Pack
 
-(** Set of integer *)
-module IntSet = Set.Make(Int)
-
 (** Graph K-coloring module *)
 module Color = Coloring.Make(Graph)
 
-(** Compute lifes of each virtual register *)
+(**
+   Compute the lifetime of each virtual register.
+   @param ql  Quad list
+   @param rc  Virtual registre number
+*)
 let get_lifes ql rc =
-  (* Array of Integer Set (life) *)
-  (* lifes[i] is the set of instructions using i *)
-  let lifes = Array.make rc (IntSet.empty) in
-  let save1 i r =
-    let r' = IdType.reg_to_int r in
-    lifes.(r') <- IntSet.add i lifes.(r');
+  let lifes = Array.make rc (-1, -1) in
+  let update i rl =
+    List.iter (fun r ->
+        let r' = IdType.reg_to_int r in
+        let b, d = lifes.(r') in
+        if b = -1 
+        then lifes.(r') <- (i, d)
+        else lifes.(r') <- (b, i)
+      ) rl
   in
-  let save2 i r1 r2 =
-    let r1' = IdType.reg_to_int r1 in
-    let r2' = IdType.reg_to_int r2 in
-    lifes.(r1') <- IntSet.add i lifes.(r1');
-    lifes.(r2') <- IntSet.add i lifes.(r2');
-  in
-  let save3 i r1 r2 r3 =
-    let r1' = IdType.reg_to_int r1 in
-    let r2' = IdType.reg_to_int r2 in
-    let r3' = IdType.reg_to_int r3 in
-    lifes.(r1') <- IntSet.add i lifes.(r1');
-    lifes.(r2') <- IntSet.add i lifes.(r2');
-    lifes.(r3') <- IntSet.add i lifes.(r3');
-  in
-  let update i q =
-    match q with
-    | Q_BINOP (_, r1, r2, r3) -> save3 i r1 r2 r3
-    | Q_BINOPI (_, r1, r2, _) -> save2 i r1 r2
-    | Q_CMP (r1, r2)          -> save2 i r1 r2
-    | Q_IFP (r1, _)           -> save1 i r1
-    | Q_LDR (r1, r2)          -> save2 i r1 r2
-    | Q_POP (r1)              -> save1 i r1
-    | Q_PUSH (r1)             -> save1 i r1
-    | Q_SET (r1, r2)          -> save2 i r1 r2
-    | Q_SETI (r1, _)          -> save1 i r1
-    | Q_STR (r1, r2)          -> save2 i r1 r2
-    | Q_UNOP (_, r1, r2)      -> save2 i r1 r2
-    | _ -> ()
-  in
-  List.iteri update ql;
+  List.iteri (fun i q ->
+      match q with
+      | Q_BINOP (_, r1, r2, r3) -> update i [r1; r2; r3];
+      | Q_BINOPI (_, r1, r2, _) -> update i [r1; r2];
+      | Q_CMP (r1, r2)          -> update i [r1; r2];
+      | Q_IFP (r1, _)           -> update i [r1];
+      | Q_LDR (r1, r2)          -> update i [r1; r2];
+      | Q_POP (r1)              -> update i [r1];
+      | Q_PUSH (r1)             -> update i [r1];
+      | Q_SET (r1, r2)          -> update i [r1; r2];
+      | Q_SETI (r1, _)          -> update i [r1];
+      | Q_STR (r1, r2)          -> update i [r1; r2];
+      | Q_UNOP (_, r1, r2)      -> update i [r1; r2];
+      | _ -> ()
+    ) ql;
   lifes
+
 
 (** Compute inteference matrix from virtual register lifes *)
 let inter_mat arr =
@@ -65,8 +55,9 @@ let inter_mat arr =
   let mat = Array.make_matrix len len false in
   for i = 0 to len - 1 do
     for j = 0 to len - 1 do
-      let inter = IntSet.inter arr.(i) arr.(j) in
-      if i <> j && inter != IntSet.empty 
+      let b1, d1 = arr.(i) in
+      let b2, d2 = arr.(j) in
+      if i <> j && not (d1 < b2 || d2 < b1)
       then mat.(i).(j) <- true
     done
   done;
@@ -96,7 +87,8 @@ let reg_alloc g =
 let dot_output_color f g =
   let open Printf in
   let oc = open_out f in
-  let color x = reg_alloc g x |> function
+  let c = reg_alloc g in
+  let color x = c x |> function
     | 0 -> "red"
     | 1 -> "orange"
     | 2 -> "yellow"

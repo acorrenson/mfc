@@ -22,34 +22,34 @@ let read_all ic =
     !data
   with End_of_file -> !data
 
-let generate ic =
+let generate ic oc =
   let data = read_all ic in
   let env = new_env () in
   let () = push_frame env in
   let () = new_function env "print" 0 1 in
-  print_endline "@ ==================";
-  print_endline "@ generated with mfc";
-  print_endline "@ ==================";
-  print_endline "int_format: .asciz \"%d\\n\"";
-  print_endline ".align";
-  print_endline "print:";
-  print_endline "ldr r0, =int_format";
-  print_endline "pop {r1}";
-  print_endline "push {lr}";
-  print_endline "bl printf";
-  print_endline "pop {pc}";
-  print_endline ".global main";
-  print_endline ".extern printf";
-  print_endline "main:";
-  print_endline "push {lr}";
+  Printf.fprintf oc "@ ==================\n";
+  Printf.fprintf oc "@ generated with mfc\n";
+  Printf.fprintf oc "@ ==================\n";
+  Printf.fprintf oc "int_format: .asciz \"%%d\\n\"\n";
+  Printf.fprintf oc ".align\n";
+  Printf.fprintf oc "print:\n";
+  Printf.fprintf oc "ldr r0, =int_format\n";
+  Printf.fprintf oc "pop {r1}\n";
+  Printf.fprintf oc "push {lr}\n";
+  Printf.fprintf oc "bl printf\n";
+  Printf.fprintf oc "pop {pc}\n";
+  Printf.fprintf oc ".global main\n";
+  Printf.fprintf oc ".extern printf\n";
+  Printf.fprintf oc "main:\n";
+  Printf.fprintf oc "push {lr}\n";
   parse _prog data |>
   (function
     | Some (ast, "") ->
       let ql = quad_s ast env in
       let rc = env.tmp_counter in
-      alloc ql rc |> print_quads
+      alloc ql rc |> print_quads oc
     | _ -> failwith "parse error");
-  print_endline "exit: b exit"
+  Printf.fprintf oc "exit: b exit"
 
 
 

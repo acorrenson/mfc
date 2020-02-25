@@ -183,7 +183,7 @@ and quad_c c env si sinon =
    Pretty print quad list
    @param lq   quad list
 *)
-let rec print_quads lq =
+let rec print_quads oc lq =
   match lq with
   | [] -> ()
   | Q_BINOP (op, r1, r2, r3)::r ->
@@ -191,50 +191,50 @@ let rec print_quads lq =
     let r1' = reg_to_int r1 in
     let r2' = reg_to_int r2 in
     let r3' = reg_to_int r3 in
-    Printf.printf "%-4s r%d, r%d, r%d\n" (bstr op) r1' r2' r3';
-    print_quads r
+    Printf.fprintf oc "%-4s r%d, r%d, r%d\n" (bstr op) r1' r2' r3';
+    print_quads oc r
   | Q_BINOPI (op, r1, r2, i)::r ->
     let open IdType in
     let r1' = reg_to_int r1 in
     let r2' = reg_to_int r2 in
-    Printf.printf "%-4s r%d, r%d, #%d\n" (bstr op) r1' r2' i;
-    print_quads r
+    Printf.fprintf oc "%-4s r%d, r%d, #%d\n" (bstr op) r1' r2' i;
+    print_quads oc r
   | Q_GOTO l::r ->
-    Printf.printf "b %s\n" (l |> IdType.lab_to_string);
-    print_quads r
+    Printf.fprintf oc "b %s\n" (l |> IdType.lab_to_string);
+    print_quads oc r
   | Q_LABEL l::r ->
-    Printf.printf "%s:\n" (IdType.lab_to_string l);
-    print_quads r
+    Printf.fprintf oc "%s:\n" (IdType.lab_to_string l);
+    print_quads oc r
   | Q_POP l::r ->
-    Printf.printf "pop  r%d\n" (IdType.reg_to_int l);
-    print_quads r
+    Printf.fprintf oc "pop  r%d\n" (IdType.reg_to_int l);
+    print_quads oc r
   | Q_PUSH l::r ->
-    Printf.printf "push {r%d}\n" (IdType.reg_to_int l);
-    print_quads r
+    Printf.fprintf oc "push {r%d}\n" (IdType.reg_to_int l);
+    print_quads oc r
   | Q_LDR (a, v)::r ->
-    Printf.printf "ldr  r%d, [r%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
-    print_quads r
+    Printf.fprintf oc "ldrb  r%d, [r%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
+    print_quads oc r
   | Q_STR (a, v)::r ->
-    Printf.printf "str  r%d, [r%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
-    print_quads r
+    Printf.fprintf oc "strb  r%d, [r%d]\n" (IdType.reg_to_int a) (IdType.reg_to_int v);
+    print_quads oc r
   | Q_SET (a, b)::r ->
-    Printf.printf "mov  r%d, r%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
-    print_quads r
+    Printf.fprintf oc "mov  r%d, r%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
+    print_quads oc r
   | Q_SETI (a, b)::r ->
-    Printf.printf "mov  r%d, #%d\n" (IdType.reg_to_int a) b;
-    print_quads r
+    Printf.fprintf oc "mov  r%d, #%d\n" (IdType.reg_to_int a) b;
+    print_quads oc r
   | Q_UNOP (_, b, c)::r ->
-    Printf.printf "%-4s r%d, r%d\n" ("not") (IdType.reg_to_int b) (IdType.reg_to_int c);
-    print_quads r
+    Printf.fprintf oc "%-4s r%d, r%d\n" ("not") (IdType.reg_to_int b) (IdType.reg_to_int c);
+    print_quads oc r
   | Q_IFP (a, b)::r ->
-    Printf.printf "add  r%d, SP, #%d\n" (IdType.reg_to_int a) b;
-    print_quads r
+    Printf.fprintf oc "add  r%d, SP, #%d\n" (IdType.reg_to_int a) b;
+    print_quads oc r
   | Q_CMP (a, b)::r ->
-    Printf.printf "cmp  r%d, r%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
-    print_quads r
+    Printf.fprintf oc "cmp  r%d, r%d\n" (IdType.reg_to_int a) (IdType.reg_to_int b);
+    print_quads oc r
   | Q_BRANCH (c, a)::r ->
-    Printf.printf "b%s  %s\n" (cstr c) (IdType.lab_to_string a);
-    print_quads r
+    Printf.fprintf oc "b%s  %s\n" (cstr c) (IdType.lab_to_string a);
+    print_quads oc r
   | Q_BRANCH_LINK (l)::r ->
-    Printf.printf "bl %s\n" (IdType.lab_to_string l);
-    print_quads r
+    Printf.fprintf oc "bl %s\n" (IdType.lab_to_string l);
+    print_quads oc r

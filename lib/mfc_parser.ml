@@ -25,7 +25,15 @@ let rec _expr inp =
       let* _ = pchar '+' |> trim in
       let* n2 = parser _expr in
       P (fun inp -> Some (Binop (Add, n1, n2), inp))
-    ) <|> parser _term
+    ) 
+    <|>
+    (
+      let* n1 = parser _term |> trim in
+      let* _ = pchar '-' |> trim in
+      let* n2 = parser _expr in
+      P (fun inp -> Some (Binop (Sub, n1, n2), inp))
+    )
+    <|> parser _term
   ) inp
 and _term inp =
   parse (

@@ -17,11 +17,13 @@ open Mfc_reg_alloc
 
 let _ =
   (* generate asm *)
-  let ic = open_in "examples/test.gen" in
-  generate ic;
+  let ic = open_in "examples/fact.gen" in
+  let oc = open_out "examples/fact.s" in
+  generate ic oc;
   close_in ic;
+  close_out oc;
   (* generate colored graph *)
-  let ic2 = open_in "examples/test.gen" in
+  let ic2 = open_in "examples/fact.gen" in
   let r = read_all ic2 in
   match parse _prog r with
   | Some (ast, "") ->
@@ -33,5 +35,5 @@ let _ =
     get_lifes ql rc (* Register lifes *)
     |> inter_mat    (* Interference matrix *)
     |> inter_graph  (* Interference graph *)
-    |> dot_output_color "examples/test.dot"
+    |> dot_output_color "examples/fact.dot"
   | _ -> failwith "parse error"
