@@ -66,7 +66,7 @@ let inter_mat arr =
   for i = 0 to len - 1 do
     for j = 0 to len - 1 do
       let inter = IntSet.inter arr.(i) arr.(j) in
-      if i <> j && inter = IntSet.empty 
+      if i <> j && inter != IntSet.empty 
       then mat.(i).(j) <- true
     done
   done;
@@ -125,3 +125,43 @@ let dot_output_color f g =
     ) g;
   fprintf oc "}\n";
   close_out oc
+
+let alloc ql rc =
+  let l = get_lifes ql rc in
+  let g = inter_mat l |> inter_graph in
+  let c = reg_alloc g in
+  let opt x =
+    IdType.reg_to_int x 
+    |> Graph.find_vertex g
+    |> c
+    |> IdType.reg
+  in
+  List.map (
+    function
+    | Q_BINOP (op, a, b, c) ->
+      Q_BINOP (op, opt a, opt b, opt c)
+    | Q_BINOPI (op, a, b, c) ->
+      Q_BINOPI (op, opt a, opt b, c)
+    | Q_BRANCH _ as q -> q
+    | Q_BRANCH_LINK _ as q -> q
+    | Q_CMP (a, b) ->
+      Q_CMP (opt a, opt b)
+    | Q_GOTO _ as q -> q
+    | Q_IFP (a, b) ->
+      Q_IFP (opt a, b)
+    | Q_LABEL _ as q -> q
+    | Q_LDR (a, b) ->
+      Q_LDR (opt a, opt b)
+    | Q_POP (a) -> 
+      Q_POP (opt a)
+    | Q_PUSH (a) ->
+      Q_PUSH (opt a)
+    | Q_SET (a, b) ->
+      Q_SET (opt a, opt b)
+    | Q_SETI (a, b) ->
+      Q_SETI (opt a, b)
+    | Q_STR (a, b) ->
+      Q_STR (opt a, opt b)
+    | Q_UNOP (u, a, b) ->
+      Q_UNOP (u, opt a, opt b)
+  ) ql

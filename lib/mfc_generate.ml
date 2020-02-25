@@ -11,6 +11,7 @@ open Mfc_parser
 open Mfc_parsing
 open Mfc_env
 open Mfc_quad
+open Mfc_reg_alloc
 
 let read_all ic =
   let data = ref "" in
@@ -43,7 +44,10 @@ let generate ic =
   print_endline "push {lr}";
   parse _prog data |>
   (function
-    | Some (ast, "") -> quad_s ast env |> print_quads
+    | Some (ast, "") ->
+      let ql = quad_s ast env in
+      let rc = env.tmp_counter in
+      alloc ql rc |> print_quads
     | _ -> failwith "parse error");
   print_endline "exit: b exit"
 
