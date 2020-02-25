@@ -1,7 +1,8 @@
 (library
   (name mfc)
   (public_name mfc)
-  (modules mfc_ast mfc_parser mfc_ast_processing mfc_cfg mfc_quad mfc_generate mfc_env mfc_parsing))
+  (libraries ocamlgraph)
+  (modules mfc_ast mfc_parser mfc_ast_processing mfc_cfg mfc_quad mfc_generate mfc_env mfc_parsing mfc_reg_alloc))
 
 (executable
   (name debug)
