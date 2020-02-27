@@ -12,7 +12,7 @@ jobs:
         uses: avsm/setup-ocaml@v1.0
         with:
           # Version of the OCaml compiler to initialise
-          ocaml-version: 4.08.1
+          ocaml-version: 4.08.0
       - name: Compile
         run: dune build
       - name: Cache
