@@ -13,6 +13,8 @@ jobs:
         with:
           # Version of the OCaml compiler to initialise
           ocaml-version: 4.08.0
+      - name: Install dune
+        run: opam install dune
       - name: Compile
         run: dune build
       - name: Cache
