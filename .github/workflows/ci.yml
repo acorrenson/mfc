@@ -1,0 +1,22 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup OCaml
+        uses: avsm/setup-ocaml@v1.0
+        with:
+          # Version of the OCaml compiler to initialise
+          ocaml-version: 4.08.1
+      - name: Compile
+        run: dune build
+      - name: Cache
+        uses: actions/cache@v1.1.2
+        with:
+          # A directory to store and save the cache
+          path: _build
