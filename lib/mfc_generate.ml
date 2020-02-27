@@ -50,11 +50,9 @@ let generate ic oc =
   parse _prog data |>
   (function
     | Some (ast, "") ->
-      let ql = quad_s ast env in
+      let open Mfc_difflist in
+      let ql = quad_s ast env |> dmake in
       let rc = env.tmp_counter in
       alloc ql rc |> print_quads oc
     | _ -> failwith "parse error");
   Printf.fprintf oc "exit: b exit"
-
-
-
