@@ -30,7 +30,7 @@ let _ =
     let env = new_env () in
     push_frame env;
     new_function env "print" 0 1;
-    let ql = quad_s ast env in
+    let ql = quad_s ast env |> Mfc_difflist.dmake in
     let rc = env.tmp_counter in
     get_lifes ql rc (* Register lifes *)
     |> inter_mat    (* Interference matrix *)
