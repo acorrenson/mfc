@@ -14,12 +14,13 @@ jobs:
           # Version of the OCaml compiler to initialise
           ocaml-version: 4.08.0
       - name: Compile
-        run: opam install dune && dune build
+        run: eval $(opam env) && opam install dune && dune build
       - name: Cache
         uses: actions/cache@v1.1.2
         with:
           # A directory to store and save the cache
           path: _build
+          key: build
       - name: Upload artifact
         uses: actions/upload-artifact@v1.0.0
         with:
