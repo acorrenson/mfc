@@ -34,11 +34,9 @@ type quad =
   | Q_CMP of vreg * vreg
   | Q_BRANCH of compare * vlab
 
-(**
-   Generate quads for Statements ({!Mfc_ast.s_ast})
-   @param s     statement ast
-   @param env   environement ({!Mfc_env.env})
-*)
+(** Generate quads for Statements ({!Mfc_ast.s_ast})
+    @param s     statement ast
+    @param env   environement ({!Mfc_env.env}) *)
 let rec quad_s s env =
   match s with
   | Set (Id i, e) ->
@@ -86,11 +84,10 @@ let rec quad_s s env =
     new_function env s r p;
     []
 
-(**
-   Generate quad for Expressions ({!Mfc_ast.e_ast})
-   @param e     expression ast
-   @param env   current env ({!Mfc_env.env})
-*)
+
+(** Generate quad for Expressions ({!Mfc_ast.e_ast})
+    @param e     expression ast
+    @param env   current env ({!Mfc_env.env}) *)
 and quad_e e env = 
   match e with
   | Binop (op, e1, Cst i) ->
@@ -130,13 +127,12 @@ and quad_e e env =
     let r = new_tmp env in
     (q1 @ [Q_UNOP (op, r, r1)]), r
 
-(**
-    Generate quads for tests ({!Mfc_ast.c_ast})
+
+(** Generate quads for tests ({!Mfc_ast.c_ast})
     @param c      condition ast
     @param env    current env ({!Mfc_env.env})
     @param si     label to target if test succeed
-    @param sinon  label to target if test fails
-*)
+    @param sinon  label to target if test fails *)
 and quad_c c env si sinon =
   let inv c =
     match c with
@@ -179,10 +175,9 @@ and quad_c c env si sinon =
   in
   cond c env si sinon true
 
-(**
-   Pretty print quad list
-   @param lq   quad list
-*)
+
+(** Pretty print quad list
+    @param lq   quad list *)
 let rec print_quads oc lq =
   match lq with
   | [] -> ()
