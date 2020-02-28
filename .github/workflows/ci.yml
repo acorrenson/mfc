@@ -14,7 +14,7 @@ jobs:
           # Version of the OCaml compiler to initialise
           ocaml-version: 4.08.0
       - name: Compile
-        run: eval $(opam env) && opam install dune ocamlgraph && dune build && dune install --prefix=_install
+        run: eval $(opam env) && opam install dune cmdliner ocamlgraph ppx_inline_test && dune build && dune install --prefix=_install
       - name: Cache
         uses: actions/cache@v1.1.2
         with:
