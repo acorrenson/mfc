@@ -14,7 +14,7 @@ jobs:
           # Version of the OCaml compiler to initialise
           ocaml-version: 4.08.0
       - name: Compile
-        run: eval $(opam env) && opam install dune && dune build
+        run: eval $(opam env) && opam install dune ocamlgraph && dune build && dune install --prefix=_install
       - name: Cache
         uses: actions/cache@v1.1.2
         with:
@@ -27,4 +27,4 @@ jobs:
           # Artifact name
           name: CI build
           # Directory containing files to upload
-          path: _build
+          path: _install
