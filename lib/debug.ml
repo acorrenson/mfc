@@ -32,6 +32,7 @@ let _ =
     new_function env "print" 0 1;
     let ql = quad_s ast env |> Mfc_difflist.dmake in
     let rc = env.tmp_counter in
+    print_quads stdout ql;
     get_lifes ql rc (* Register lifes *)
     |> inter_mat    (* Interference matrix *)
     |> inter_graph  (* Interference graph *)

@@ -51,7 +51,7 @@ let rec quad_s s env =
     end
   | Block s ->
     (* List.fold_left (@) [] (List.map (fun s -> quad_s s env) s) *)
-    dconcat_map (fun s -> quad_s s env) s
+    List.map (fun s -> quad_s s env) s |> dconcat
   | Call (Id i, le) ->
     let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
     let lq, lr = List.split lres in
