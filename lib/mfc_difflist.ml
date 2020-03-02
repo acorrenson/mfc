@@ -24,6 +24,10 @@ let rec dconcat_map f l =
   | [] -> dzero
   | x::xs -> dappend (dconcat_map f xs) (f x)
 
+let fold_left f acc =
+  function DList fl -> List.fold_left f acc (fl [])
+
+
 let dmake =
   function
   | DList f -> f []
