@@ -49,7 +49,8 @@ let get_lifes ql rc =
   lifes
 
 
-(** Compute inteference matrix from virtual register lifes *)
+(** Compute inteference matrix from virtual register lifes 
+    @param  arr   lifetimes array *)
 let inter_mat arr =
   let len = Array.length arr in
   let mat = Array.make_matrix len len false in
@@ -63,7 +64,9 @@ let inter_mat arr =
   done;
   mat
 
-(** Compute inteference graph from virtual interference matrix *)
+
+(** Compute inteference graph from virtual interference matrix 
+    @param  mat   interference matrix *)
 let inter_graph mat =
   let g = Graph.create () in
   let l = Array.length mat in
@@ -78,12 +81,17 @@ let inter_graph mat =
   done;
   g
 
-(** Perform register allocation, returns a int -> int map *)
+
+(** Perform register allocation, returns a int -> int map 
+    @param  g   intereference graph *)
 let reg_alloc g =
   let m = Color.coloring g 12 in
   Color.H.find m
 
-(** Perform reg allocation and output the result to a dot file *)
+
+(** Perform reg allocation and output the result to a dot file 
+    @param  f   output file
+    @param  g   interference graph *)
 let dot_output_color f g =
   let open Printf in
   let oc = open_out f in
@@ -118,6 +126,10 @@ let dot_output_color f g =
   fprintf oc "}\n";
   close_out oc
 
+
+(** Perform register allocation
+    @param  ql  quad list
+    @param  rc  register number *)
 let alloc ql rc =
   let l = get_lifes ql rc in
   let g = inter_mat l |> inter_graph in

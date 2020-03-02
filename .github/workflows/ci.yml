@@ -1,0 +1,30 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup OCaml
+        uses: avsm/setup-ocaml@v1.0
+        with:
+          # Version of the OCaml compiler to initialise
+          ocaml-version: 4.08.0
+      - name: Compile
+        run: eval $(opam env) && opam install dune cmdliner ocamlgraph ppx_inline_test && dune build && dune install --prefix=_install
+      - name: Cache
+        uses: actions/cache@v1.1.2
+        with:
+          # A directory to store and save the cache
+          path: _build
+          key: build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          # Artifact name
+          name: CI build
+          # Directory containing files to upload
+          path: _install

@@ -13,6 +13,8 @@ open Mfc_env
 open Mfc_quad
 open Mfc_reg_alloc
 
+(** Read all the text from a channel
+    @param  ic  input channel *)
 let read_all ic =
   let data = ref "" in
   try
@@ -22,6 +24,9 @@ let read_all ic =
     !data
   with End_of_file -> !data
 
+(** Generate arm code from sources in channel [ic] to channel [oc]
+    @param  ic  input channel
+    @param  oc  output channel *)
 let generate ic oc =
   let data = read_all ic in
   let env = new_env () in
