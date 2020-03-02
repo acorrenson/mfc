@@ -47,7 +47,7 @@ let rec quad_s s env =
       | Some off ->
         let v = new_tmp env in
         let q1, v1 = quad_e e env in
-        q1 |- Q_IFP (v, off) |- Q_STR (v1, v)
+        q1 <+ Q_IFP (v, off) <+ Q_STR (v1, v)
     end
   | Block s ->
     (* List.fold_left (@) [] (List.map (fun s -> quad_s s env) s) *)
@@ -60,7 +60,7 @@ let rec quad_s s env =
     let push = dconst_map (fun s -> Q_PUSH (s)) lr in
     begin
       match lookup_opt_fun env i with
-      | Some (l, r, p) when (r = 0 && p = List.length le) -> q ++ push |- Q_BRANCH_LINK l
+      | Some (l, r, p) when (r = 0 && p = List.length le) -> q ++ push <+ Q_BRANCH_LINK l
       | _ -> failwith "Error in function call"
     end
   | If (c, s1, s2) ->
@@ -69,17 +69,17 @@ let rec quad_s s env =
     let qc = quad_c c env _si _sinon in
     let q1 = quad_s s1 env in
     let q2 = quad_s s2 env in
-    ((qc |- Q_LABEL _si) ++ q1 |- Q_LABEL _sinon) ++ q2
+    ((qc <+ Q_LABEL _si) ++ q1 <+ Q_LABEL _sinon) ++ q2
   | While (c, s) ->
     let _loop = new_label env in
     let _body = new_label env in
     let _end = new_label env in
     let qc = quad_c c env _body _end in
     let q = quad_s s env in
-    (dconst ((Q_LABEL _loop)::(dmake qc)) |- Q_LABEL _body) ++ q |- Q_GOTO _loop |- Q_LABEL _end
+    (dconst ((Q_LABEL _loop)::(dmake qc)) <+ Q_LABEL _body) ++ q <+ Q_GOTO _loop <+ Q_LABEL _end
   | Ret e ->
     let qe, ve = quad_e e env in
-    qe |- Q_PUSH ve
+    qe <+ Q_PUSH ve
   | Declare s ->
     new_local env s;
     dzero
@@ -97,13 +97,13 @@ and quad_e e env =
     let r = new_tmp env in
     let q1, r1 = quad_e e1 env in
     (* q1 @ [ Q_BINOPI (op, r, r1, i)], r *)
-    (q1 |- Q_BINOPI(op, r, r1, i), r)
+    (q1 <+ Q_BINOPI(op, r, r1, i), r)
   | Binop (op, e1, e2) ->
     let r = new_tmp env in
     let q1, r1 = quad_e e1 env in
     let q2, r2 = quad_e e2 env in
     (* q1 @ q2 @ [ Q_BINOP (op, r, r1, r2)], r *)
-    (q1 ++ q2 |- Q_BINOP (op,r,r1,r2), r)
+    (q1 ++ q2 <+ Q_BINOP (op,r,r1,r2), r)
   | Cst i ->
     let r = new_tmp env in
     (* [Q_SETI (r, i)], r *)
@@ -114,7 +114,7 @@ and quad_e e env =
     begin
       match lookup_opt env x with
       | None -> failwith ("unknown variable " ^ x)
-      | Some off -> (dsnoc (Q_IFP(r1,off)) |- Q_LDR(r2,r1), r2)
+      | Some off -> (dsnoc (Q_IFP(r1,off)) <+ Q_LDR(r2,r1), r2)
     end
   | Ecall (Id x, le) ->
     let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
@@ -126,14 +126,14 @@ and quad_e e env =
       match lookup_opt_fun env x with
       | Some(l, r, p) when (r = 1 && p = List.length le) ->
         (* (q @ push @ [Q_BRANCH_LINK l] @ [Q_POP ret]), ret *)
-        (q ++ push |- Q_BRANCH_LINK l |- Q_POP ret, ret)
+        (q ++ push <+ Q_BRANCH_LINK l <+ Q_POP ret, ret)
       | _ -> failwith "Error in function call"
     end
   | Unop (op, e1) ->
     let q1, r1 = quad_e e1 env in
     let r = new_tmp env in
     (* (q1 @ [Q_UNOP (op, r, r1)]), r *)
-    (q1 |- Q_UNOP (op, r, r1), r)
+    (q1 <+ Q_UNOP (op, r, r1), r)
 
 
 (** Generate quads for tests ({!Mfc_ast.c_ast})
@@ -162,7 +162,7 @@ and quad_c c env si sinon =
       begin
         match dmake q1 |> List.rev with
         | (Q_GOTO a)::r when a = l -> dconst (List.rev r) ++ q2
-        | _ -> (q1 |- Q_LABEL l) ++ q2
+        | _ -> (q1 <+ Q_LABEL l) ++ q2
       end
     | And (c1, c2) ->
       let l = new_label env in
@@ -171,15 +171,15 @@ and quad_c c env si sinon =
       begin
         match dmake q1 |> List.rev with
         | (Q_GOTO a)::r when a = l -> dconst (List.rev r) ++ q2
-        | _ -> (q1 |- Q_LABEL l) ++ q2
+        | _ -> (q1 <+ Q_LABEL l) ++ q2
       end
     | Cmp (c, e1, e2) ->
       let q1, v1 = quad_e e1 env in
       let q2, v2 = quad_e e2 env in
       if p then
-        q1 ++ q2 |- Q_CMP (v1, v2) |- Q_BRANCH (c, si) |- Q_GOTO sinon
+        q1 ++ q2 <+ Q_CMP (v1, v2) <+ Q_BRANCH (c, si) <+ Q_GOTO sinon
       else
-        q1 ++ q2 |- Q_CMP (v1, v2) |- Q_BRANCH (inv c, sinon) |- Q_GOTO si
+        q1 ++ q2 <+ Q_CMP (v1, v2) <+ Q_BRANCH (inv c, sinon) <+ Q_GOTO si
   in
   cond c env si sinon true
 
