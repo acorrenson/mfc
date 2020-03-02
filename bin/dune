@@ -2,5 +2,9 @@
  (public_name mfc)
  (name main)
  (libraries mfc base cmdliner)
- (preprocess
-  (pps ppx_inline_test)))
+ (modules main))
+
+(executable
+ (name benchmark)
+ (modules benchmark)
+ (libraries mfc core core_bench))
