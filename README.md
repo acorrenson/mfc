@@ -27,5 +27,5 @@ Even if MFC is working on [small examples](https://github.com/jdrprod/mfc/exampl
 
 + **Real intermediate language** : in fact, our quad language is an abstraction over ARM. and is not generic at all.
 + **Ast verification** : The AST is currently poorly verified
-+ **Code optimization** : Even if we perform register allocation 
++ **Code optimization** : Few optimizations are done. Simple optimization such as DAGs to avoid recomputing arithmetic expressions could be implemented.
 
