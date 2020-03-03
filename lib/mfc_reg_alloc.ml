@@ -7,7 +7,7 @@
 (*          Copyright (c) 2020 Arthur Correnson, Nathan Graule            *)
 (**************************************************************************)
 
-open Mfc_quad
+open Mfc_arm_quad
 open Mfc_env
 open Graph
 open Pack
@@ -33,17 +33,17 @@ let get_lifes ql rc =
   in
   List.iteri (fun i q ->
       match q with
-      | Q_BINOP (_, r1, r2, r3) -> update i [r1; r2; r3];
-      | Q_BINOPI (_, r1, r2, _) -> update i [r1; r2];
-      | Q_CMP (r1, r2)          -> update i [r1; r2];
-      | Q_IFP (r1, _)           -> update i [r1];
-      | Q_LDR (r1, r2)          -> update i [r1; r2];
-      | Q_POP (r1)              -> update i [r1];
-      | Q_PUSH (r1)             -> update i [r1];
-      | Q_SET (r1, r2)          -> update i [r1; r2];
-      | Q_SETI (r1, _)          -> update i [r1];
-      | Q_STR (r1, r2)          -> update i [r1; r2];
-      | Q_UNOP (_, r1, r2)      -> update i [r1; r2];
+      | QARM_BINOP (_, r1, r2, r3) -> update i [r1; r2; r3];
+      | QARM_BINOPI (_, r1, r2, _) -> update i [r1; r2];
+      | QARM_CMP (r1, r2)          -> update i [r1; r2];
+      | QARM_IFP (r1, _)           -> update i [r1];
+      | QARM_LDR (r1, r2)          -> update i [r1; r2];
+      | QARM_POP (r1)              -> update i [r1];
+      | QARM_PUSH (r1)             -> update i [r1];
+      | QARM_SET (r1, r2)          -> update i [r1; r2];
+      | QARM_SETI (r1, _)          -> update i [r1];
+      | QARM_STR (r1, r2)          -> update i [r1; r2];
+      | QARM_UNOP (_, r1, r2)      -> update i [r1; r2];
       | _ -> ()
     ) ql;
   lifes
@@ -142,30 +142,30 @@ let alloc ql rc =
   in
   List.map (
     function
-    | Q_BINOP (op, a, b, c) ->
-      Q_BINOP (op, opt a, opt b, opt c)
-    | Q_BINOPI (op, a, b, c) ->
-      Q_BINOPI (op, opt a, opt b, c)
-    | Q_BRANCH _ as q -> q
-    | Q_BRANCH_LINK _ as q -> q
-    | Q_CMP (a, b) ->
-      Q_CMP (opt a, opt b)
-    | Q_GOTO _ as q -> q
-    | Q_IFP (a, b) ->
-      Q_IFP (opt a, b)
-    | Q_LABEL _ as q -> q
-    | Q_LDR (a, b) ->
-      Q_LDR (opt a, opt b)
-    | Q_POP (a) -> 
-      Q_POP (opt a)
-    | Q_PUSH (a) ->
-      Q_PUSH (opt a)
-    | Q_SET (a, b) ->
-      Q_SET (opt a, opt b)
-    | Q_SETI (a, b) ->
-      Q_SETI (opt a, b)
-    | Q_STR (a, b) ->
-      Q_STR (opt a, opt b)
-    | Q_UNOP (u, a, b) ->
-      Q_UNOP (u, opt a, opt b)
+    | QARM_BINOP (op, a, b, c) ->
+      QARM_BINOP (op, opt a, opt b, opt c)
+    | QARM_BINOPI (op, a, b, c) ->
+      QARM_BINOPI (op, opt a, opt b, c)
+    | QARM_BRANCH _ as qARM -> qARM
+    | QARM_BRANCH_LINK _ as qARM -> qARM
+    | QARM_CMP (a, b) ->
+      QARM_CMP (opt a, opt b)
+    | QARM_GOTO _ as qARM -> qARM
+    | QARM_IFP (a, b) ->
+      QARM_IFP (opt a, b)
+    | QARM_LABEL _ as qARM -> qARM
+    | QARM_LDR (a, b) ->
+      QARM_LDR (opt a, opt b)
+    | QARM_POP (a) -> 
+      QARM_POP (opt a)
+    | QARM_PUSH (a) ->
+      QARM_PUSH (opt a)
+    | QARM_SET (a, b) ->
+      QARM_SET (opt a, opt b)
+    | QARM_SETI (a, b) ->
+      QARM_SETI (opt a, b)
+    | QARM_STR (a, b) ->
+      QARM_STR (opt a, opt b)
+    | QARM_UNOP (u, a, b) ->
+      QARM_UNOP (u, opt a, opt b)
   ) ql
