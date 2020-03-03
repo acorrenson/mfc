@@ -12,7 +12,7 @@ open Mfc_generate
 open Mfc_parsing
 open Mfc_parser
 open Mfc_env
-open Mfc_quad
+open Mfc_arm_quad
 open Mfc_reg_alloc
 
 let _ =
