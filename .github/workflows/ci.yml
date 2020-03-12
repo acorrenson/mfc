@@ -19,7 +19,7 @@ jobs:
         uses: actions/cache@v1.1.2
         with:
           # A directory to store and save the cache
-          path: _build
+          path: _install
           key: build
       - name: Upload artifact
         uses: actions/upload-artifact@v1.0.0
