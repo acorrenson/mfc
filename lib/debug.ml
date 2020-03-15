@@ -9,12 +9,48 @@
 
 open Mfc
 open Mfc_generate
-open Mfc_parsing
+open Libnacc.Parsers
 open Mfc_parser
 open Mfc_env
 open Mfc_quad
 open Mfc_reg_alloc
 
+module P = StringParser
+
+let rec linecol_of_offset' =
+  let const x _ = x (* in
+                       let findidx c cl =
+                       let rec step x i =
+                       function
+                       | [] -> None
+                       | c::_ when x==c -> Some i
+                       | _::cl -> step x (i+1) cl
+                       in step c 0 cl
+                       in
+                       let linelen cl =
+                       match findidx '\n' cl with
+                       | None -> List.length cl
+                       | Some x -> x
+                       in
+                       let rec splitat n =
+                       function
+                       | [] -> ([], [])
+                       | c::cl -> let (a,b) = splitat n cl in
+                       (c::a,b)
+                       in
+                       let snd (_,b) = b *)
+  in function
+    | [] -> const (1,1)
+    | '\n'::cl -> (fun o ->
+        let (line,col) = linecol_of_offset' cl o in
+        (line+1,col))
+    | _::cl ->
+      function
+      | _ as o when o <= 0 -> (1,1)
+      | _ as o ->
+        let (line,col) = linecol_of_offset' cl (o - 1) in
+        (line,col)
+let linecol_of_offset s o = linecol_of_offset' (P.String.explode s) o
 let _ =
   (* generate asm *)
   let ic = open_in "examples/fact.gen" in
@@ -25,16 +61,19 @@ let _ =
   (* generate colored graph *)
   let ic2 = open_in "examples/fact.gen" in
   let r = read_all ic2 in
-  match parse _prog r with
-  | Some (ast, "") ->
+  let open StringParser in
+  let open Mfc_difflist in
+  try
+    let ast = do_parse _prog r in
     let env = new_env () in
     push_frame env;
     new_function env "print" 0 1;
-    let ql = quad_s ast env |> Mfc_difflist.dmake in
+    let ql = quad_s ast env |> dmake in
     let rc = env.tmp_counter in
     print_quads stdout ql;
-    get_lifes ql rc (* Register lifes *)
-    |> inter_mat    (* Interference matrix *)
-    |> inter_graph  (* Interference graph *)
+    get_lifes ql rc
+    |> inter_mat
+    |> inter_graph
     |> dot_output_color "examples/fact.dot"
-  | _ -> failwith "parse error"
+  with
+  | ParseException (o, _) -> print_endline ("Parse error at offset "^string_of_int o)

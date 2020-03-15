@@ -7,60 +7,41 @@
 (*          Copyright (c) 2020 Arthur Correnson, Nathan Graule            *)
 (**************************************************************************)
 
-open Mfc_parsing
+open Libnacc.Parsers
 open Mfc_ast
 
-let _sym = many (anychar_in "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ") |> fmap combine
-let _digit = anychar_in "0123456789"
-let _nat =
-  many _digit
-  |> fmap (fun lc -> List.fold_left (^) "" (List.map (String.make 1) lc))
-  |> fmap (fun i -> Cst (int_of_string i))
+open StringParser
+
+let _sym = String.join <$> many (one_in "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+let _digit = one_in "0123456789"
+let _nat = integer
+let spaced p = trim [' ';'\t';'\n'] p
 
 
 let rec _expr inp =
-  parse (
-    (
-      let* n1 = parser _term |> trim in
-      let* _ = pchar '+' |> trim in
-      let* n2 = parser _expr in
-      P (fun inp -> Some (Binop (Add, n1, n2), inp))
-    ) 
+  let add a b = Binop(Add, a, b) in
+  let sub a b = Binop(Sub, a, b) in
+  inp --> (
+    ebinop2 add '+' ~~_term ~~_expr
     <|>
-    (
-      let* n1 = parser _term |> trim in
-      let* _ = pchar '-' |> trim in
-      let* n2 = parser _expr in
-      P (fun inp -> Some (Binop (Sub, n1, n2), inp))
-    )
-    <|> parser _term
-  ) inp
+    ebinop2 sub '-' ~~_term ~~_expr
+    <|> ~~_term
+  )
 and _term inp =
-  parse (
-    (
-      let* f = parser _factor |> trim in
-      let* _ = pchar '*' in
-      let* t = parser _term |> trim in
-      P (fun inp -> Some (Binop (Mult, f, t), inp))
-    ) <|> parser _factor
-  ) inp
+  let mul a b = Binop(Mult, a, b) in
+  inp --> (
+    ebinop2 mul '*' ~~_factor ~~_term <|> ~~_factor
+  )
 and _factor inp =
-  parse (
-    (
-      let* _ = pchar '(' |> trim in
-      let* e = parser _expr in
-      let* _ = pchar ')' |> trim in
-      P (fun inp -> Some (e, inp))
-    ) <|> _nat <|> (_sym |> trim |> fmap (fun x -> Ref (Id x)))
-  ) inp
+  let idref x = Ref(Id x) in
+  let astval a = Cst a in
+  inp --> (
+    eparenthesized '(' ~~_expr ')' <|> (astval <$> _nat) <|> (idref <$> spaced _sym)
+  )
 
 let _comp_c c =
-  (
-    let* l = parser _expr |> trim in
-    let* _ = literal (csym c) |> trim in
-    let* r = parser _expr |> trim in
-    P (fun inp -> Some (Cmp (c, l, r), inp))
-  )
+  let astcmp l r = Cmp (c,l,r) in
+  binop astcmp (csym c |> literal) (spaced ~~_expr)
 let _comp =
   _comp_c Lt
   <|> _comp_c Le
@@ -70,109 +51,51 @@ let _comp =
   <|> _comp_c Eq
 
 let rec _cond inp =
-  parse (
-    (
-      let* c1 = parser _cterm in
-      let* _ = literal "or" |> trim in
-      let* c2 = parser _cond in
-      P (fun inp -> Some (Or (c1, c2), inp))
-    )
-    <|> parser _cterm
-  ) inp
+  let astor l r = Or (l,r) in
+  inp --> (binop2 astor (literal "or" |> spaced) ~~_cterm ~~_cond
+           <|> ~~_cterm)
 and _cterm inp =
-  parse (
-    (
-      let* c1 = parser _cfactor in
-      let* _ = literal "and" |> trim in
-      let* c2 = parser _cterm in
-      P (fun inp -> Some (And (c1, c2), inp))
-    )
-    <|> parser _cfactor
-  ) inp
+  let astand l r = And (l,r) in
+  inp --> (binop2 astand (literal "and" |> spaced) ~~_cfactor ~~_cterm <|> ~~_cfactor)
 and _cfactor inp =
-  parse (
-    (
-      let* _ = literal "not" |> trim in
-      let* c2 = parser _cfactor in
-      P (fun inp -> Some (Not (c2), inp))
-    )
-    <|> 
-    (
-      let* _ = pchar '(' |> trim in
-      let* c = parser _cond in
-      let* _ = pchar ')' |> trim in
-      P (fun inp -> Some (c, inp))
-    )
-    <|> _comp
-  ) inp
+  let astnot c = Not c in
+  inp --> (astnot <$> (literal "not" |> spaced) *> ~~_cfactor <|> eparenthesized '(' ~~_cond ')')
 
 let _arglist =
-  some (
-    let* e = parser _expr |> trim in
-    let* _ = pchar ',' in
-    P (fun inp -> Some (e, inp))
-  )
-
+  let inner = (~~_expr |> spaced) <* elem ',' in
+  some inner
 let _args =
-  (
-    let* a = _arglist in
-    let* e = parser _expr |> trim in
-    P (fun inp -> Some (a @ [e], inp))
-  )
+  let append a e = a @ [e] in
+  append <$> _arglist <*> (~~_expr |> spaced)
   <|>
-  (optional (parser _expr))
+  (optional (~~_expr))
 
 
-let rec _stmt inp =
-  parse (
-    (
-      let* _ = literal "if" |> trim in
-      let* _ = (pchar '(') |> trim in
-      let* c = parser _cond in
-      let* _ = pchar ')' |> trim in
-      let* _ = pchar '{' |> trim in
-      let* s1 = parser _stmt in
-      let* _ = pchar '}' |> trim in
-      let* _ = literal "else" in
-      let* _ = pchar '{' |> trim in
-      let* s2 = parser _stmt in
-      let* _ = pchar '}' |> trim in
-      P (fun inp -> Some (If (c, s1, s2), inp))
-    )
+let rec _stmt inp: s_ast state =
+  inp --> begin
+    let astif c i e = If(c, i, e) in
+    astif
+    <$> (literal "if" |> spaced) *> eparenthesized '(' (~~_cond |> spaced) ')'
+    <*> eparenthesized '{' ~~_stmt '}'
+    <*> (literal "else" |> spaced) *> eparenthesized '{' ~~_stmt '}'
     <|>
-    (
-      let* _ = literal "var" |> trim in
-      let* s = _sym in
-      P (fun inp -> Some (Declare s, inp))
-    )
+    let astdeclare v = Declare v in
+    astdeclare <$> (literal "var" |> spaced) *> _sym
     <|>
-    (
-      let* s = _sym |> trim in
-      let* _ = pchar '=' in
-      let* e = parser _expr |> trim in
-      P (fun inp -> Some (Set(Id s, e), inp))
-    )
+    let astassign i v = Set(Id i, v) in
+    astassign <$> spaced _sym <*> (~~_expr |> spaced)
     <|>
-    (
-      let* fn = _sym |> trim in
-      let* _ = pchar '(' |> trim in
-      let* a = _args in
-      let* _ = pchar ')' |> trim in
-      P (fun inp -> Some (Call (Id fn, a), inp))
-    )
+    let astcall f a = Call(Id f, a) in
+    astcall <$> spaced _sym <*> eparenthesized '(' _args ')'
     <|>
-    (
-      let* _ = literal "while" |> trim in
-      let* _ = pchar '(' |> trim in
-      let* c = parser _cond in
-      let* _ = pchar ')' |> trim in
-      let* _ = pchar '{' |> trim in
-      let* s = many (parser _stmt) |> trim in
-      let* _ = pchar '}' |> trim in
-      P (fun inp -> Some (While (c, Block s), inp))
-    )
-  ) inp
+    let astwhile c s = While(c, Block s) in
+    astwhile <$> (literal "while" |> spaced) *> eparenthesized '(' ~~_cond ')' <*> eparenthesized '{' (many ~~_stmt) '}'
+  end
+
+(* let _prog =
+   let* def = many (parser _stmt) in
+   P (fun inp -> Some (Block (def), inp)) *)
 
 let _prog =
-  let* def = many (parser _stmt) in
-  P (fun inp -> Some (Block (def), inp))
+  let astblock b = Block b in
+  astblock <$> many ~~_stmt
