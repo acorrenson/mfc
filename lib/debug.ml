@@ -18,38 +18,18 @@ open Mfc_reg_alloc
 module P = StringParser
 
 let rec linecol_of_offset' =
-  let const x _ = x (* in
-                       let findidx c cl =
-                       let rec step x i =
-                       function
-                       | [] -> None
-                       | c::_ when x==c -> Some i
-                       | _::cl -> step x (i+1) cl
-                       in step c 0 cl
-                       in
-                       let linelen cl =
-                       match findidx '\n' cl with
-                       | None -> List.length cl
-                       | Some x -> x
-                       in
-                       let rec splitat n =
-                       function
-                       | [] -> ([], [])
-                       | c::cl -> let (a,b) = splitat n cl in
-                       (c::a,b)
-                       in
-                       let snd (_,b) = b *)
+  let const x _ = x
   in function
-    | [] -> const (1,1)
+    | [] -> const (1, 1)
     | '\n'::cl -> (fun o ->
-        let (line,col) = linecol_of_offset' cl o in
-        (line+1,col))
+        let (line, col) = linecol_of_offset' cl o in
+        (line + 1, col))
     | _::cl ->
       function
-      | _ as o when o <= 0 -> (1,1)
+      | _ as o when o <= 0 -> (1, 1)
       | _ as o ->
-        let (line,col) = linecol_of_offset' cl (o - 1) in
-        (line,col)
+        let (line, col) = linecol_of_offset' cl (o - 1) in
+        (line, col + 1)
 let linecol_of_offset s o = linecol_of_offset' (P.String.explode s) o
 let _ =
   (* generate asm *)
