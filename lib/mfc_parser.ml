@@ -12,7 +12,7 @@ open Mfc_ast
 
 open StringParser
 
-let _sym = String.join <$> many (one_in "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+let _sym = String.join <$> some (one_in "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 let _digit = one_in "0123456789"
 let _nat = integer
 let spaced p = trim [' ';'\t';'\n'] p
@@ -83,7 +83,7 @@ let rec _stmt inp: s_ast state =
     astdeclare <$> (literal "var" |> spaced) *> _sym
     <|>
     let astassign i v = Set(Id i, v) in
-    astassign <$> spaced _sym <*> (~~_expr |> spaced)
+    astassign <$> spaced _sym <*> spaced (elem '=') *> (~~_expr |> spaced)
     <|>
     let astcall f a = Call(Id f, a) in
     astcall <$> spaced _sym <*> eparenthesized '(' _args ')'
@@ -98,4 +98,4 @@ let rec _stmt inp: s_ast state =
 
 let _prog =
   let astblock b = Block b in
-  astblock <$> many ~~_stmt
+  astblock <$> some ~~_stmt

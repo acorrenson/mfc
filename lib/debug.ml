@@ -17,40 +17,24 @@ open Mfc_reg_alloc
 
 module P = StringParser
 
-let rec linecol_of_offset' =
-  let const x _ = x (* in
-                       let findidx c cl =
-                       let rec step x i =
-                       function
-                       | [] -> None
-                       | c::_ when x==c -> Some i
-                       | _::cl -> step x (i+1) cl
-                       in step c 0 cl
-                       in
-                       let linelen cl =
-                       match findidx '\n' cl with
-                       | None -> List.length cl
-                       | Some x -> x
-                       in
-                       let rec splitat n =
-                       function
-                       | [] -> ([], [])
-                       | c::cl -> let (a,b) = splitat n cl in
-                       (c::a,b)
-                       in
-                       let snd (_,b) = b *)
-  in function
-    | [] -> const (1,1)
-    | '\n'::cl -> (fun o ->
-        let (line,col) = linecol_of_offset' cl o in
-        (line+1,col))
-    | _::cl ->
-      function
-      | _ as o when o <= 0 -> (1,1)
-      | _ as o ->
-        let (line,col) = linecol_of_offset' cl (o - 1) in
-        (line,col)
-let linecol_of_offset s o = linecol_of_offset' (P.String.explode s) o
+let linecol_of_offset s o =
+  let substr = String.sub s 0 o in
+  match String.rindex_opt substr '\n' with
+  | None -> (1, o+1)
+  | Some nl ->
+    let col = o - nl in
+    let line = String.split_on_char '\n' substr |> List.length in
+    (line, col)
+
+let pp_error s o =
+  let (l,c) = linecol_of_offset s o in
+  let const x _ = x in
+  let flip f a b = f b a in
+  let get_line s l = String.split_on_char '\n' s |> flip List.nth l in
+  print_endline ("Parse error at line "^string_of_int l^":");
+  print_endline ("\t"^get_line s (l-1));
+  print_endline ("\t"^String.init (c-1) (const ' ')^"^")
+
 let _ =
   (* generate asm *)
   let ic = open_in "examples/fact.gen" in
@@ -76,4 +60,4 @@ let _ =
     |> inter_graph
     |> dot_output_color "examples/fact.dot"
   with
-  | ParseException (o, _) -> print_endline ("Parse error at offset "^string_of_int o)
+  | ParseException (o, _) -> pp_error r o
