@@ -51,8 +51,8 @@ let generate ic oc =
   Printf.fprintf oc "push {lr}\n";
   try
     let ast = do_parse _prog data in
-    let open Mfc_difflist in
-    let ql = quad_s ast env |> dmake in
+    let open Difflist in
+    let ql = quad_s ast env |> to_list in
     let rc = env.tmp_counter in
     alloc ql rc |> print_quads oc;
     Printf.fprintf oc "exit: b exit"

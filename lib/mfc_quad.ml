@@ -9,7 +9,7 @@
 
 open Mfc_ast
 open Mfc_env
-open Mfc_difflist
+open Difflist
 
 (** Alias for virtual registers *)
 type vreg = IdType.reg
@@ -52,12 +52,14 @@ let rec quad_s s env =
   | Block s ->
     (* List.fold_left (@) [] (List.map (fun s -> quad_s s env) s) *)
     (* List.map (fun s -> quad_s s env) s |> dconcat *)
-    dconst s |> fold_left (fun acc s -> acc ++ quad_s s env) dzero
+    (* snoc s |> fold_left (fun acc s -> acc ++ quad_s s env) dzero *)
+    List.map (fun s -> quad_s s env) s |> concat
   | Call (Id i, le) ->
     let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
     let lq, lr = List.split lres in
-    let q = dconcat lq in
-    let push = dconst_map (fun s -> Q_PUSH (s)) lr in
+    let q = concat lq in
+    let qpush s = Q_PUSH s in
+    let push = List.map qpush lr |> of_list in
     begin
       match lookup_opt_fun env i with
       | Some (l, r, p) when (r = 0 && p = List.length le) -> q ++ push <+ Q_BRANCH_LINK l
@@ -76,16 +78,18 @@ let rec quad_s s env =
     let _end = new_label env in
     let qc = quad_c c env _body _end in
     let q = quad_s s env in
-    (dconst ((Q_LABEL _loop)::(dmake qc)) <+ Q_LABEL _body) ++ q <+ Q_GOTO _loop <+ Q_LABEL _end
+    (* (dconst ((Q_LABEL _loop)::(dmake qc)) <+ Q_LABEL _body) ++ q <+ Q_GOTO _loop <+ Q_LABEL _end *)
+    (Q_LABEL _loop +> qc <+ Q_LABEL _body) ++ q <+ Q_GOTO _loop <+ Q_LABEL _end
   | Ret e ->
     let qe, ve = quad_e e env in
+
     qe <+ Q_PUSH ve
   | Declare s ->
     new_local env s;
-    dzero
+    empty
   | DeclareFun (s, r, p) ->
     new_function env s r p;
-    dzero
+    empty
 
 
 (** Generate quad for Expressions ({!Mfc_ast.e_ast})
@@ -107,20 +111,21 @@ and quad_e e env =
   | Cst i ->
     let r = new_tmp env in
     (* [Q_SETI (r, i)], r *)
-    (dsnoc (Q_SETI (r,i)),r)
+    (snoc (Q_SETI (r,i)),r)
   | Ref (Id x) ->
     let r1 = new_tmp env in
     let r2 = new_tmp env in
     begin
       match lookup_opt env x with
       | None -> failwith ("unknown variable " ^ x)
-      | Some off -> (dsnoc (Q_IFP(r1,off)) <+ Q_LDR(r2,r1), r2)
+      | Some off -> (snoc (Q_IFP(r1,off)) <+ Q_LDR(r2,r1), r2)
     end
   | Ecall (Id x, le) ->
     let lres = List.fold_left (fun a e -> a @ [quad_e e env]) [] le in
     let lq, lr = List.split lres in
-    let q = dconcat lq in
-    let push = dconst_map (fun s -> Q_PUSH (s)) lr in
+    let q = concat lq in
+    let qpush s = Q_PUSH s in
+    let push = List.map qpush lr |> of_list (* dconst_map (fun s -> Q_PUSH (s)) lr *) in
     let ret = new_tmp env in
     begin
       match lookup_opt_fun env x with
@@ -151,7 +156,7 @@ and quad_c c env si sinon =
     | Ge -> Lt
     | Ne -> Eq
   in
-  let rec cond c env si sinon p: quad dlist =
+  let rec cond c env si sinon p =
     match c with
     | Not c ->
       cond c env sinon si true
@@ -160,8 +165,8 @@ and quad_c c env si sinon =
       let q1 = cond c1 env l sinon true in
       let q2 = cond c2 env si sinon true in
       begin
-        match dmake q1 |> List.rev with
-        | (Q_GOTO a)::r when a = l -> dconst (List.rev r) ++ q2
+        match to_list q1 |> List.rev with
+        | (Q_GOTO a)::r when a = l -> of_list (List.rev r) ++ q2
         | _ -> (q1 <+ Q_LABEL l) ++ q2
       end
     | And (c1, c2) ->
@@ -169,8 +174,8 @@ and quad_c c env si sinon =
       let q1 = cond c1 env l sinon false in
       let q2 = cond c2 env si sinon  false in
       begin
-        match dmake q1 |> List.rev with
-        | (Q_GOTO a)::r when a = l -> dconst (List.rev r) ++ q2
+        match to_list q1 |> List.rev with
+        | (Q_GOTO a)::r when a = l -> of_list (List.rev r) ++ q2
         | _ -> (q1 <+ Q_LABEL l) ++ q2
       end
     | Cmp (c, e1, e2) ->

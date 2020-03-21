@@ -46,13 +46,13 @@ let _ =
   let ic2 = open_in "examples/fact.gen" in
   let r = read_all ic2 in
   let open StringParser in
-  let open Mfc_difflist in
+  let open Difflist in
   try
     let ast = do_parse _prog r in
     let env = new_env () in
     push_frame env;
     new_function env "print" 0 1;
-    let ql = quad_s ast env |> dmake in
+    let ql = quad_s ast env |> to_list in
     let rc = env.tmp_counter in
     print_quads stdout ql;
     get_lifes ql rc

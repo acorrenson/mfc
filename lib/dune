@@ -1,10 +1,10 @@
 (library
   (name mfc)
   (public_name mfc)
-  (libraries ocamlgraph nacc)
-  (modules mfc_ast mfc_parser mfc_ast_processing mfc_cfg mfc_quad mfc_generate mfc_env mfc_reg_alloc mfc_difflist))
+  (libraries ocamlgraph nacc difflist)
+  (modules mfc_ast mfc_parser mfc_ast_processing mfc_cfg mfc_quad mfc_generate mfc_env mfc_reg_alloc))
 
 (executable
   (name debug)
-  (libraries str mfc)
+  (libraries str mfc difflist)
   (modules debug))
