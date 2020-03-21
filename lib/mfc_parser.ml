@@ -7,10 +7,14 @@
 (*          Copyright (c) 2020 Arthur Correnson, Nathan Graule            *)
 (**************************************************************************)
 
+open Libnacc.Parsing
 open Libnacc.Parsers
 open Mfc_ast
 
-open StringParser
+module String = struct
+  include String
+  let join cl = List.map (make 1) cl |> List.fold_left (^) ""
+end
 
 let _sym = String.join <$> some (one_in "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 let _digit = one_in "0123456789"
@@ -22,15 +26,15 @@ let rec _expr inp =
   let add a b = Binop(Add, a, b) in
   let sub a b = Binop(Sub, a, b) in
   inp --> (
-    ebinop2 add '+' ~~_term ~~_expr
+    ebinop2 add ~~_term '+' ~~_expr
     <|>
-    ebinop2 sub '-' ~~_term ~~_expr
+    ebinop2 sub ~~_term '-' ~~_expr
     <|> ~~_term
   )
 and _term inp =
   let mul a b = Binop(Mult, a, b) in
   inp --> (
-    ebinop2 mul '*' ~~_factor ~~_term <|> ~~_factor
+    ebinop2 mul ~~_factor '*' ~~_term <|> ~~_factor
   )
 and _factor inp =
   let idref x = Ref(Id x) in
@@ -52,17 +56,17 @@ let _comp =
 
 let rec _cond inp =
   let astor l r = Or (l,r) in
-  inp --> (binop2 astor (literal "or" |> spaced) ~~_cterm ~~_cond
+  inp --> (binop2 astor ~~_cterm (literal "or" |> spaced) ~~_cond
            <|> ~~_cterm)
 and _cterm inp =
   let astand l r = And (l,r) in
-  inp --> (binop2 astand (literal "and" |> spaced) ~~_cfactor ~~_cterm <|> ~~_cfactor)
+  inp --> (binop2 astand ~~_cfactor (literal "and" |> spaced) ~~_cterm <|> ~~_cfactor)
 and _cfactor inp =
   let astnot c = Not c in
   inp --> (astnot <$> (literal "not" |> spaced) *> ~~_cfactor <|> eparenthesized '(' ~~_cond ')')
 
 let _arglist =
-  let inner = (~~_expr |> spaced) <* elem ',' in
+  let inner = (~~_expr |> spaced) <* char ',' in
   some inner
 let _args =
   let append a e = a @ [e] in
@@ -83,7 +87,7 @@ let rec _stmt inp: s_ast state =
     astdeclare <$> (literal "var" |> spaced) *> _sym
     <|>
     let astassign i v = Set(Id i, v) in
-    astassign <$> spaced _sym <*> spaced (elem '=') *> (~~_expr |> spaced)
+    astassign <$> spaced _sym <*> spaced (char '=') *> (~~_expr |> spaced)
     <|>
     let astcall f a = Call(Id f, a) in
     astcall <$> spaced _sym <*> eparenthesized '(' _args ')'

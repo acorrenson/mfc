@@ -7,13 +7,11 @@
 (*          Copyright (c) 2020 Arthur Correnson, Nathan Graule            *)
 (**************************************************************************)
 
-open Libnacc.Parsers
+open Libnacc.Parsing
 open Mfc_parser
 open Mfc_env
 open Mfc_quad
 open Mfc_reg_alloc
-
-open StringParser
 
 (** Read all the text from a channel
     @param  ic  input channel *)
@@ -49,12 +47,12 @@ let generate ic oc =
   Printf.fprintf oc ".extern printf\n";
   Printf.fprintf oc "main:\n";
   Printf.fprintf oc "push {lr}\n";
-  try
-    let ast = do_parse _prog data in
+  match do_parse _prog data |> report with
+  | None -> ()
+  | Some ast -> begin
     let open Difflist in
     let ql = quad_s ast env |> to_list in
     let rc = env.tmp_counter in
     alloc ql rc |> print_quads oc;
     Printf.fprintf oc "exit: b exit"
-  with
-  | ParseException (o, _) -> print_endline ("Parse error at offset "^(string_of_int o))
+  end

@@ -9,13 +9,11 @@
 
 open Mfc
 open Mfc_generate
-open Libnacc.Parsers
+open Libnacc.Parsing
 open Mfc_parser
 open Mfc_env
 open Mfc_quad
 open Mfc_reg_alloc
-
-module P = StringParser
 
 let linecol_of_offset s o =
   let substr = String.sub s 0 o in
@@ -45,10 +43,10 @@ let _ =
   (* generate colored graph *)
   let ic2 = open_in "examples/fact.gen" in
   let r = read_all ic2 in
-  let open StringParser in
   let open Difflist in
-  try
-    let ast = do_parse _prog r in
+  match do_parse _prog r |> report with
+  | None -> ()
+  | Some ast -> begin
     let env = new_env () in
     push_frame env;
     new_function env "print" 0 1;
@@ -59,5 +57,4 @@ let _ =
     |> inter_mat
     |> inter_graph
     |> dot_output_color "examples/fact.dot"
-  with
-  | ParseException (o, _) -> pp_error r o
+  end
