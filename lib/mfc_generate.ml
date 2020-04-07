@@ -7,8 +7,8 @@
 (*          Copyright (c) 2020 Arthur Correnson, Nathan Graule            *)
 (**************************************************************************)
 
+open Libnacc.Parsing
 open Mfc_parser
-open Mfc_parsing
 open Mfc_env
 open Mfc_quad
 open Mfc_reg_alloc
@@ -47,12 +47,12 @@ let generate ic oc =
   Printf.fprintf oc ".extern printf\n";
   Printf.fprintf oc "main:\n";
   Printf.fprintf oc "push {lr}\n";
-  parse _prog data |>
-  (function
-    | Some (ast, "") ->
-      let open Mfc_difflist in
-      let ql = quad_s ast env |> dmake in
-      let rc = env.tmp_counter in
-      alloc ql rc |> print_quads oc
-    | _ -> failwith "parse error");
-  Printf.fprintf oc "exit: b exit"
+  match do_parse _prog data |> report with
+  | None -> ()
+  | Some ast -> begin
+    let open Difflist in
+    let ql = quad_s ast env |> to_list in
+    let rc = env.tmp_counter in
+    alloc ql rc |> print_quads oc;
+    Printf.fprintf oc "exit: b exit"
+  end

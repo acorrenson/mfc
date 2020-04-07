@@ -1,0 +1,6 @@
+[submodule "modules/nacc"]
+	path = modules/nacc
+	url = git@github.com:codeanonorg/nacc.git
+[submodule "modules/difflist"]
+	path = modules/difflist
+	url = git@github.com:SolarLiner/ml-difflist.git

@@ -8,6 +8,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Setup OCaml
         uses: avsm/setup-ocaml@v1.0
         with:
