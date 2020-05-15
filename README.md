@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/jdrprod/mfc/workflows/CI/badge.svg)
 
-MFC stands for "My First Compiler". It is a little compiler for a language created by [SolarLiner](https://github.com/solarliner). It targets ARM or [EVA](https://github.com/eva-vm).
+MFC stands for "My First Compiler". It is a little compiler for a language created by [SolarLiner](https://github.com/solarliner). It targets ARM.
 
 ## Structure of the compiler
 
