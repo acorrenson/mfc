@@ -18,7 +18,7 @@ opam install dune ocamlgraph
 dune build
 ```
 
-**[3] Using mfc** :
+**[3] Using Mfc** :
 ```
 ./_build/default/bin/main.exe -i input.get -o output.s [-r]
 ```
@@ -29,6 +29,44 @@ Help can be displayed passing the `-h` flag.
 ./_build/default/bin/main.exe -h
 ```
 
+## Overview of the Gen language
+
+The language Mfc compiles is minimalist. It manipulates only integers.
+
+Variables declarations
+```
+var x
+```
+
+Variables affectation
+```
+x = 5
+```
+
+**Note** : As in old C standards, declarations and affectations should be separated.
+
+Loops
+```
+while (x < 10) {
+  ...
+}
+```
+
+Conditionals
+```
+if (x < 10) {
+  ...
+} else {
+  ...
+}
+```
+
+Arithmetic
+```
+x = x + x
+x = x - x
+x = x * x
+```
 
 ## Structure of the compiler
 
@@ -38,9 +76,7 @@ MFC is designed in OCaml. For now, it's a 3 passes compiler :
 3. Arm generation (Register allocation)
 
 Ocaml modules are like follow :
-+ **Mfc_ast** : Module implementing the AST 
-+ **Mfc_ast_processing** : Module implementing AST verification functions
-+ **Mfc_cfg** : Control Flow Graph extraction (for visual rendering only)
++ **Mfc_ast** : Module implementing the AST
 + **Mfc_parser** : The parser
 + **Mfc_parsing** : The parsing lib
 + **Mfc_reg_alloc** : Algorithm(s) for register allocation
@@ -49,7 +85,7 @@ Ocaml modules are like follow :
 
 ## Todo(s)
 
-Even if MFC is working on [small examples](https://github.com/jdrprod/mfc/examples), there is still a lot to do.
+Even if MFC is working on [small examples](https://github.com/jdrprod/mfc/examples), there are possible improvements.
 
 + **Real intermediate language** : in fact, our quad language is an abstraction over ARM. and is not generic at all.
 + **Ast verification** : The AST is currently poorly verified
