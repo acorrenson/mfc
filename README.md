@@ -20,7 +20,7 @@ dune build
 
 **[3] Using mfc** :
 ```
-./_build/default/bin/main.exe -i input.get -o output.gen [-r]
+./_build/default/bin/main.exe -i input.get -o output.s [-r]
 ```
 
 Help can be displayed passing the `-h` flag.
