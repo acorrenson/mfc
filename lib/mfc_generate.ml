@@ -27,32 +27,36 @@ let read_all ic =
 (** Generate arm code from sources in channel [ic] to channel [oc]
     @param  ic  input channel
     @param  oc  output channel *)
-let generate ic oc =
+let generate ?(graph) ic oc =
   let data = read_all ic in
-  let env = new_env () in
-  let () = push_frame env in
-  let () = new_function env "print" 0 1 in
-  Printf.fprintf oc "@ ==================\n";
-  Printf.fprintf oc "@ generated with mfc\n";
-  Printf.fprintf oc "@ ==================\n";
-  Printf.fprintf oc "int_format: .asciz \"%%d\\n\"\n";
-  Printf.fprintf oc ".align\n";
-  Printf.fprintf oc "print:\n";
-  Printf.fprintf oc "ldr r0, =int_format\n";
-  Printf.fprintf oc "pop {r1}\n";
-  Printf.fprintf oc "push {lr}\n";
-  Printf.fprintf oc "bl printf\n";
-  Printf.fprintf oc "pop {pc}\n";
-  Printf.fprintf oc ".global main\n";
-  Printf.fprintf oc ".extern printf\n";
-  Printf.fprintf oc "main:\n";
-  Printf.fprintf oc "push {lr}\n";
-  parse _prog data |>
-  (function
-    | Some (ast, "") ->
-      let open Mfc_difflist in
-      let ql = quad_s ast env |> dmake in
-      let rc = env.tmp_counter in
-      alloc ql rc |> print_quads oc
-    | _ -> failwith "parse error");
-  Printf.fprintf oc "exit: b exit"
+  let ast_opt = parse _prog data in
+  match ast_opt with
+  | Some (ast, "") ->
+    let env = new_env () in
+    let () = push_frame env in
+    let () = new_function env "print" 0 1 in
+    Printf.fprintf oc "@ ==================\n";
+    Printf.fprintf oc "@ generated with mfc\n";
+    Printf.fprintf oc "@ ==================\n";
+    Printf.fprintf oc "int_format: .asciz \"%%d\\n\"\n";
+    Printf.fprintf oc ".align\n";
+    Printf.fprintf oc "print:\n";
+    Printf.fprintf oc "ldr r0, =int_format\n";
+    Printf.fprintf oc "pop {r1}\n";
+    Printf.fprintf oc "push {lr}\n";
+    Printf.fprintf oc "bl printf\n";
+    Printf.fprintf oc "pop {pc}\n";
+    Printf.fprintf oc ".global main\n";
+    Printf.fprintf oc ".extern printf\n";
+    Printf.fprintf oc "main:\n";
+    Printf.fprintf oc "push {lr}\n";
+    let open Mfc_difflist in
+    let ql = quad_s ast env |> dmake in
+    let rc = env.tmp_counter in
+    alloc ql rc |> print_quads oc;
+    Printf.fprintf oc "exit: b exit";
+    (match graph with
+     | Some oc -> dot_output_color oc (get_lifes ql rc |> inter_mat |> inter_graph)
+     | None -> ())
+  | _ -> failwith "parse error"
+
