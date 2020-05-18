@@ -4,6 +4,32 @@
 
 MFC stands for "My First Compiler". It is a little compiler for a language created by [SolarLiner](https://github.com/solarliner). It targets ARM.
 
+## Using it
+
+Compiling MFC requires dune and the ocamlgraph package.
+
+**[1] Dependencies installation** :
+```
+opam install dune ocamlgraph
+```
+
+**[2] Compiling Mfc** :
+```
+dune build
+```
+
+**[3] Using mfc** :
+```
+./_build/default/bin/main.exe -i input.get -o output.gen [-r]
+```
+
+Help can be displayed passing the `-h` flag.
+
+```
+./_build/default/bin/main.exe -h
+```
+
+
 ## Structure of the compiler
 
 MFC is designed in OCaml. For now, it's a 3 passes compiler :
@@ -27,5 +53,5 @@ Even if MFC is working on [small examples](https://github.com/jdrprod/mfc/exampl
 
 + **Real intermediate language** : in fact, our quad language is an abstraction over ARM. and is not generic at all.
 + **Ast verification** : The AST is currently poorly verified
-+ **Code optimization** : Some simple optimizations could be implemented (DAGs to avoid recomputing arithmetic expressions could be implemented.
++ **Code optimization** : Some simple optimizations could be implemented (DAGs to avoid recomputing arithmetic expressions for example).
 
